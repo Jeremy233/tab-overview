@@ -5,3 +5,6 @@
 *.crx
 *.pem
 *.zip
+
+# Dependencies of tools/
+node_modules/

@@ -89,6 +89,22 @@ Chrome 只允许扩展截取当前显示在屏幕上的那个标签页。所以 
 
 Tab Overview 不发起任何网络请求，没有统计分析，也不加载远程代码。
 
+## 重新生成截图
+
+README 里的截图是用脚本自动生成的，界面改动后可以随时重新生成。需要 [Node.js](https://nodejs.org) 18 或更高版本，以及 Google Chrome。
+
+```bash
+cd tools/screenshots
+npm install
+npm run screenshots
+```
+
+脚本会在后台用一个临时配置启动 Chrome（不会动你自己的浏览器数据），从 `extension/` 加载扩展，在两个窗口里打开一组虚构的演示网站，等扩展截好缩略图后，再给总览页拍照。中英文两套大约需要一分钟，图片会写入 `docs/images/en/` 和 `docs/images/zh/`。
+
+- 只生成一种语言：`npm run screenshots -- --lang zh`
+- 使用其他 Chrome 或 Chromium：`CHROME_PATH=/path/to/chrome npm run screenshots`
+- 演示网站在 `tools/screenshots/demo-sites.js` 里；要打开哪些标签页、怎么分组、搜什么词，在 `tools/screenshots/render.js` 开头设置。
+
 ## 项目结构
 
 ```
@@ -102,6 +118,7 @@ tab-overview/
 │   ├── i18n.js          中英文界面文字
 │   └── _locales/        Chrome 显示的扩展名称和描述
 ├── docs/images/         README 里用到的截图
+├── tools/screenshots/   生成这些截图的脚本
 ├── LICENSE
 ├── README.md
 └── README.zh-CN.md

@@ -89,6 +89,22 @@ Chrome only lets extensions take a screenshot of the tab that is currently on sc
 
 Tab Overview makes no network requests, has no analytics and loads no remote code.
 
+## Regenerating the screenshots
+
+The screenshots in this README are rendered by a script, so they can be refreshed whenever the interface changes. It needs [Node.js](https://nodejs.org) 18 or later and Google Chrome.
+
+```bash
+cd tools/screenshots
+npm install
+npm run screenshots
+```
+
+The script starts Chrome in the background with a temporary profile (your own profile isn't touched) and loads the extension from `extension/`. It opens a set of fictional demo sites in two windows, lets the extension capture them, then photographs the overview. Both languages take about a minute, and the images are written to `docs/images/en/` and `docs/images/zh/`.
+
+- Render one language only: `npm run screenshots -- --lang zh`
+- Use a different Chrome or Chromium build: `CHROME_PATH=/path/to/chrome npm run screenshots`
+- The demo sites live in `tools/screenshots/demo-sites.js`; the tabs, groups and search term are set at the top of `tools/screenshots/render.js`.
+
 ## Project layout
 
 ```
@@ -102,6 +118,7 @@ tab-overview/
 │   ├── i18n.js          interface text in English and 简体中文
 │   └── _locales/        name and description shown by Chrome
 ├── docs/images/         screenshots used in this README
+├── tools/screenshots/   script that renders those screenshots
 ├── LICENSE
 ├── README.md
 └── README.zh-CN.md

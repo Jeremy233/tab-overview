@@ -1,0 +1,15 @@
+{
+  "name": "tab-overview-screenshots",
+  "private": true,
+  "description": "Renders the screenshots used in Tab Overview's README",
+  "license": "MIT",
+  "scripts": {
+    "screenshots": "node render.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^24.43.1"
+  }
+}
