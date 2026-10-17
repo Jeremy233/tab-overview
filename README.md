@@ -17,7 +17,7 @@
 - **Instant search** by title or URL as you type. Works with IME input such as Pinyin.
 - **Keyboard first**: arrow keys to move, <kbd>Enter</kbd> to switch, <kbd>Esc</kbd> to go back.
 - **Tab groups** fold into one card showing a mosaic of their tabs; open a group to see all of them.
-- **Tidy up in place**: close a tab or a whole group, or open a new tab in any window or group.
+- **Tidy up in place**: close a tab, close a whole group (Chrome keeps it saved), or open a new tab in any window or group.
 - **Light and dark** themes that follow your system; **English and 简体中文** interface.
 - **Page thumbnails are opt-in**: off by default, so tabs show their site icon. The first time you turn them on, Tab Overview explains what that means and asks first. Thumbnails stay in the browser's memory, are never saved to disk or sent anywhere, and are cleared when Chrome quits.
 - **Your own background**: put a picture behind the overview and adjust its brightness, opacity and blur, with a live preview. The picture stays on your computer.
@@ -67,7 +67,7 @@ With the mouse: click a card to switch to that tab, click **×** to close it, an
 
 ### Tab groups
 
-Each tab group appears as one card with its color, name, number of tabs and a mosaic of up to nine of them. Click it (or press <kbd>Enter</kbd>) to see all of its tabs, and click **‹ All Tabs** (or press <kbd>Esc</kbd>) to go back. **+ New Tab** inside a group adds the new tab to that group. The **×** on a group card closes every tab in the group.
+Each tab group appears as one card with its color, name, number of tabs and a mosaic of up to nine of them. Click it (or press <kbd>Enter</kbd>) to see all of its tabs, and click **‹ All Tabs** (or press <kbd>Esc</kbd>) to go back. **+ New Tab** inside a group adds the new tab to that group. The **×** on a group card closes the group without deleting it: its tabs close, and the group stays among Chrome's saved tab groups, on the left of the bookmarks bar, where one click reopens it with all its tabs. Chrome has no way for extensions to do this directly, so Tab Overview moves the group into a minimized window of its own and closes that window, which is how Chrome keeps a group when its window closes. Closing the tabs inside a group one at a time is different: when the last one closes, Chrome deletes the saved group.
 
 <img src="docs/images/en/group.webp" alt="Inside the Work group: four tabs and a New Tab card">
 

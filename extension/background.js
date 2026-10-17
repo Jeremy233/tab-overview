@@ -226,6 +226,38 @@ function forgetTab(tabId) {
 chrome.tabs.onRemoved.addListener(forgetTab);
 chrome.tabs.onReplaced.addListener((_added, removed) => forgetTab(removed));
 
+// Closing a tab group from the overview. Chrome keeps a group among the saved tab
+// groups (on the left of the bookmarks bar) when its window closes, but deletes it
+// when an extension closes the group's last tab. So close the group's window if it
+// holds nothing else, or else move the group into a minimized window of its own and
+// close that. The overview hides the window (it opens on STASH_URL) meanwhile.
+// It runs here rather than in the overview so it finishes even if the overview closes.
+const STASH_URL = 'about:blank#tab-overview-closing-group';
+
+async function closeTabGroup(groupId) {
+  const group = await chrome.tabGroups.get(groupId);
+  const others = await chrome.tabs.query({ windowId: group.windowId });
+  if (others.every((tab) => tab.groupId === groupId)) {
+    await chrome.windows.remove(group.windowId);
+    return;
+  }
+  const stash = await chrome.windows.create({ url: STASH_URL, state: 'minimized', focused: false });
+  try {
+    await chrome.tabGroups.move(groupId, { windowId: stash.id, index: -1 });
+  } finally {
+    await chrome.windows.remove(stash.id);
+  }
+}
+
+chrome.runtime.onMessage.addListener((message, _sender, reply) => {
+  if (message?.closeTabGroup == null) return;
+  closeTabGroup(message.closeTabGroup).then(
+    () => reply({ ok: true }),
+    (err) => reply({ error: String(err?.message || err) }),
+  );
+  return true; // the reply comes later
+});
+
 // Toolbar button / ⌘⇧E: open the overview, or close it if it's already showing.
 async function toggleOverview(windowId) {
   // Look the tab up afresh: a click just before this one may have opened the overview.

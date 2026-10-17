@@ -35,6 +35,9 @@ const thumbKey = (tabId) => `thumb:${tabId}`;
 const tabKey = (id) => `tab:${id}`;
 const groupKey = (id) => `group:${id}`;
 const isOverview = (tab) => (tab.url || tab.pendingUrl || '').startsWith(OVERVIEW_URL);
+// The minimized window background.js moves a tab group into to close it (see there).
+const STASH_URL = 'about:blank#tab-overview-closing-group';
+const isStash = (tab) => (tab.url || tab.pendingUrl) === STASH_URL;
 
 function faviconUrl(tab) {
   const url = new URL(chrome.runtime.getURL('/_favicon/'));
@@ -90,7 +93,8 @@ function queryTabs() {
 function setTabs(all, groupList) {
   // Refresh our own tab too: it may have been dragged to another window.
   selfTab = all.find((tab) => tab.id === selfTab?.id) ?? selfTab;
-  tabs = all.filter((tab) => tab.id !== selfTab?.id && !isOverview(tab));
+  const stashes = new Set(all.filter(isStash).map((tab) => tab.windowId));
+  tabs = all.filter((tab) => tab.id !== selfTab?.id && !isOverview(tab) && !stashes.has(tab.windowId));
   groups = new Map(groupList.map((g) => [g.id, g]));
   // Forget the elements and screenshots of tabs, groups and windows that are gone.
   const ids = new Set(tabs.map((tab) => tab.id));
@@ -273,7 +277,7 @@ function buildGroupCard(groupId, list) {
     el('span', 'count', String(list.length)),
   );
 
-  card.append(mosaic, meta, closeButton(t('closeGroup'), () => closeCard(card, list.map((tab) => tab.id))));
+  card.append(mosaic, meta, closeButton(t('closeGroup'), () => closeCard(card, list.map((tab) => tab.id), groupId)));
   card.addEventListener('click', () => openGroup(groupId));
   return card;
 }
@@ -490,8 +494,9 @@ function goBack() {
   closeSelf();
 }
 
-// Close one tab, or every tab behind a group card.
-function closeCard(card, ids) {
+// Close one tab, or the group behind a group card. Groups are closed by
+// background.js, in a way that keeps them among Chrome's saved tab groups.
+function closeCard(card, ids, groupId = null) {
   if (selectedKey === card.dataset.key) {
     const list = cards();
     const idx = list.indexOf(card);
@@ -502,7 +507,12 @@ function closeCard(card, ids) {
   updateSelection(false);
   search.focus({ preventScroll: true }); // the clicked button is going away
   for (const id of ids) closing.add(id);
-  chrome.tabs.remove(ids)
+  const closed = groupId == null
+    ? chrome.tabs.remove(ids)
+    : chrome.runtime.sendMessage({ closeTabGroup: groupId }).then((reply) => {
+      if (!reply?.ok) throw new Error(reply?.error);
+    });
+  closed
     .then(() => { tabs = tabs.filter((tab) => !ids.includes(tab.id)); }) // don't bring them back before the reload
     .catch(() => {})
     .finally(() => {
