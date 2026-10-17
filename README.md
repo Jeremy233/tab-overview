@@ -33,7 +33,7 @@ Tab Overview isn't on the Chrome Web Store yet, so install it as an unpacked ext
 
 It needs Chrome 112 or later. Other Chromium-based browsers should work too, but haven't been tested.
 
-To update later, pull the latest code (or download it again) and click the reload button ↻ on the extension's card in `chrome://extensions`.
+To find out whether there's a newer version, click **Check for updates** in the overview's settings. To update, pull the latest code (or download it again) and click the reload button ↻ on the extension's card in `chrome://extensions`.
 
 ## How to use it
 
@@ -41,7 +41,7 @@ To update later, pull the latest code (or download it again) and click the reloa
 
 Press <kbd>⌘</kbd><kbd>⇧</kbd><kbd>E</kbd> on macOS or <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>E</kbd> on Windows and Linux, or click the toolbar button. The tab you came from is marked **Current** and already selected. Press the shortcut again, or <kbd>Esc</kbd>, to close the overview and return to it.
 
-> If the shortcut does nothing, another extension may already be using it. Pick your own under **Settings → Shortcut → Change**, or at `chrome://extensions/shortcuts`.
+> If the shortcut does nothing, another extension may already be using it. Click the shortcut shown in **Settings** to pick your own, or go to `chrome://extensions/shortcuts`.
 
 ### Find a tab
 
@@ -68,7 +68,13 @@ Each tab group appears as one card with its color, name, number of tabs and a mo
 
 ### Settings
 
-Click the gear in the top-right corner to choose the language (follow the browser, 中文 or English), turn page screenshots on or off, and see or change the keyboard shortcut.
+Click the gear in the top-right corner to:
+
+- choose the language (follow the browser, 中文 or English);
+- turn page screenshots on or off;
+- see the keyboard shortcut, and click it to change it;
+- see the version and **Check for updates**;
+- open the project on **GitHub**.
 
 <img src="docs/images/en/settings.webp" alt="Settings panel with language and shortcut options" width="540">
 
@@ -92,7 +98,7 @@ While it's on, keep in mind that Chrome only lets extensions capture the tab tha
 | `favicon` | Show site icons from Chrome's own cache, without any network requests |
 | Access to all sites (optional) | Only asked for when you turn on page screenshots: Chrome requires it to capture the visible tab |
 
-When you install it, Chrome only mentions reading your browsing history (from `tabs`) and managing tab groups. Tab Overview makes no network requests, has no analytics and loads no remote code.
+When you install it, Chrome only mentions reading your browsing history (from `tabs`) and managing tab groups. Tab Overview has no analytics and loads no remote code. The only network request it ever makes is when you click **Check for updates**: it reads the version number in this repository's `extension/manifest.json` on GitHub.
 
 ## Regenerating the screenshots
 

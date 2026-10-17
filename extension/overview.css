@@ -235,11 +235,46 @@ header {
   font-weight: 600;
 }
 
-.shortcut {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.settings .hint[hidden] { display: none; }
+.settings .value { margin-left: 4px; color: var(--muted); }
+
+/* The current shortcut, drawn as a key; clicking it opens Chrome's shortcut settings. */
+.key {
+  flex: none;
+  min-width: 24px;
+  padding: 2px 8px;
+  border: 0;
+  border-radius: 5px;
+  background: var(--field);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  cursor: pointer;
 }
+
+.key:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+
+.pill {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--field);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.pill:hover { background: color-mix(in srgb, var(--muted) 30%, transparent); }
+.pill:disabled { cursor: progress; opacity: 0.6; }
+.pill svg { width: 14px; height: 14px; fill: currentColor; }
 
 .link {
   padding: 0;

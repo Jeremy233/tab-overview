@@ -196,7 +196,7 @@ async function render(lang, base) {
     await overview.click('#settings-btn');
     await overview.mouse.move(8, 8);
     await sleep(300);
-    await shoot('settings', { clip: { x: 900, y: 0, width: 540, height: 330 } });
+    await shoot('settings', { clip: { x: 900, y: 0, width: 540, height: 410 } });
 
     console.log(`  ${path.relative(ROOT, outDir)}/: ${fs.readdirSync(outDir).join(', ')}`);
   } finally {

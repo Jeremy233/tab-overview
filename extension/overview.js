@@ -544,9 +544,62 @@ function moveSelection(dir) {
 async function showShortcut() {
   const commands = await chrome.commands.getAll();
   const key = commands.find((c) => c.name === '_execute_action')?.shortcut;
-  const kbd = document.getElementById('shortcut-key');
-  kbd.textContent = key || t('shortcutNone');
+  document.getElementById('shortcut-key').textContent = key || t('shortcutNone');
 }
+
+// ---- version, updates, developer ----
+
+const MANIFEST = chrome.runtime.getManifest();
+const REPO_URL = MANIFEST.homepage_url; // https://github.com/<developer>/<repo>
+// The manifest on GitHub's main branch is the latest release.
+const LATEST_MANIFEST_URL = `${REPO_URL.replace('//github.com/', '//raw.githubusercontent.com/')}/main/extension/manifest.json`;
+const updateStatus = document.getElementById('update-status');
+const checkUpdatesBtn = document.getElementById('check-updates');
+
+document.getElementById('version').textContent = MANIFEST.version;
+document.getElementById('developer').textContent = new URL(REPO_URL).pathname.split('/')[1];
+
+// Is version `a` newer than `b`? (dotted numbers, e.g. 0.10.1 > 0.9.3)
+function isNewer(a, b) {
+  const pa = a.split('.').map(Number);
+  const pb = b.split('.').map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) > (pb[i] || 0);
+  }
+  return false;
+}
+
+function openPage(url) {
+  chrome.tabs.create({ url });
+}
+
+// The only network request Tab Overview ever makes, and only when asked to.
+async function checkForUpdates() {
+  checkUpdatesBtn.disabled = true;
+  updateStatus.hidden = false;
+  updateStatus.textContent = t('checking');
+  try {
+    const res = await fetch(LATEST_MANIFEST_URL, { cache: 'no-store', credentials: 'omit' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const latest = String((await res.json()).version || '');
+    if (latest && isNewer(latest, MANIFEST.version)) {
+      const link = el('button', 'link', t('getUpdate'));
+      link.type = 'button';
+      link.addEventListener('click', () => openPage(REPO_URL));
+      updateStatus.replaceChildren(`${t('updateAvailable', latest)} `, link);
+    } else {
+      updateStatus.textContent = t('upToDate');
+    }
+  } catch (err) {
+    console.warn('update check failed', err);
+    updateStatus.textContent = t('updateFailed');
+  } finally {
+    checkUpdatesBtn.disabled = false;
+  }
+}
+
+checkUpdatesBtn.addEventListener('click', checkForUpdates);
+document.getElementById('github').addEventListener('click', () => openPage(REPO_URL));
 
 async function showScreenshotsSetting() {
   shotsSwitch.setAttribute('aria-checked', await chrome.permissions.contains(SCREENSHOT_PERMISSION));
@@ -626,9 +679,7 @@ document.getElementById('shots-tip-close').addEventListener('click', () => {
   search.focus({ preventScroll: true });
 });
 
-document.getElementById('shortcut-change').addEventListener('click', () => {
-  chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
-});
+document.getElementById('shortcut-key').addEventListener('click', () => openPage('chrome://extensions/shortcuts'));
 
 // ---- events ----
 
