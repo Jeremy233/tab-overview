@@ -1,8 +1,10 @@
-# Tab Overview
+<p align="center"><img src="docs/images/icon.png" width="128" height="128" alt=""></p>
 
-**English** · [简体中文](README.zh-CN.md)
+<h1 align="center">Tab Overview</h1>
 
-See all your open tabs at once, as a Safari-style thumbnail grid for Chrome. Press <kbd>⌘</kbd><kbd>⇧</kbd><kbd>E</kbd>, spot the tab you want, and jump straight to it.
+<p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
+
+<p align="center">See all your open tabs at once, as a Safari-style thumbnail grid for Chrome.<br>Press <kbd>⌘</kbd><kbd>⇧</kbd><kbd>E</kbd>, spot the tab you want, and jump straight to it.</p>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/en/overview-dark.webp">
@@ -17,7 +19,7 @@ See all your open tabs at once, as a Safari-style thumbnail grid for Chrome. Pre
 - **Tab groups** fold into one card showing a mosaic of their tabs; open a group to see all of them.
 - **Tidy up in place**: close a tab or a whole group, or open a new tab in any window or group.
 - **Light and dark** themes that follow your system; **English and 简体中文** interface.
-- **Private**: screenshots stay in the browser's memory, are never saved to disk or sent anywhere, and are cleared when Chrome quits.
+- **Screenshots are opt-in**: off by default, so tabs show their site icon. Turn them on in Settings and pictures are taken as you view tabs; they stay in the browser's memory, are never saved to disk or sent anywhere, and are cleared when Chrome quits.
 
 ## Install
 
@@ -27,6 +29,7 @@ Tab Overview isn't on the Chrome Web Store yet, so install it as an unpacked ext
 2. Open `chrome://extensions` and turn on **Developer mode** (top right).
 3. Click **Load unpacked** and select the **`extension`** folder inside the project.
 4. Optional: click the puzzle-piece icon in Chrome's toolbar and pin **Tab Overview**.
+5. Optional: to see a picture of each page instead of its icon, open the overview, click the gear and turn on **Page screenshots** (see [Page screenshots](#page-screenshots)).
 
 It needs Chrome 112 or later. Other Chromium-based browsers should work too, but haven't been tested.
 
@@ -65,15 +68,17 @@ Each tab group appears as one card with its color, name, number of tabs and a mo
 
 ### Settings
 
-Click the gear in the top-right corner to choose the language (follow the browser, 中文 or English) and to see or change the keyboard shortcut.
+Click the gear in the top-right corner to choose the language (follow the browser, 中文 or English), turn page screenshots on or off, and see or change the keyboard shortcut.
 
 <img src="docs/images/en/settings.webp" alt="Settings panel with language and shortcut options" width="540">
 
-## How the thumbnails work
+## Page screenshots
 
-Chrome only lets extensions take a screenshot of the tab that is currently on screen. So Tab Overview takes a small screenshot whenever you look at a tab: shortly after you switch to it, after it finishes loading, and right before the overview opens. That means:
+Screenshots are **off by default**: every tab is shown with its site icon and name. To see a picture of each page, turn on **Settings → Page screenshots**. Chrome then asks you to allow Tab Overview to *“Read and change all your data on all websites”*. That is the access Chrome requires before an extension may capture the visible tab, and Tab Overview uses it for nothing else. Turning the switch off gives that access back and deletes every screenshot immediately.
 
-- A tab you haven't looked at since Chrome started shows its icon and site name until you visit it once.
+While it's on, keep in mind that Chrome only lets extensions capture the tab that is currently on screen. So Tab Overview takes a small screenshot whenever you look at a tab: shortly after you switch to it, after it finishes loading, and right before the overview opens. That means:
+
+- A tab you haven't looked at since turning screenshots on (or since Chrome started) shows its icon and site name until you visit it once.
 - Some pages can't be captured: browser pages such as `chrome://…`, the Chrome Web Store, and local files (unless you turn on **Allow access to file URLs** in the extension's details).
 - Thumbnails are kept in memory only, up to about 10 MB (roughly 180 tabs). When that fills up, the thumbnails of tabs you haven't viewed for the longest time are dropped first. Everything is cleared when Chrome quits.
 
@@ -85,9 +90,9 @@ Chrome only lets extensions take a screenshot of the tab that is currently on sc
 | `tabGroups` | Show tab groups with their names and colors |
 | `storage` | Keep thumbnails (in memory only) and your language setting |
 | `favicon` | Show site icons from Chrome's own cache, without any network requests |
-| Access to all sites | Chrome requires it to screenshot the visible tab |
+| Access to all sites (optional) | Only asked for when you turn on page screenshots: Chrome requires it to capture the visible tab |
 
-Tab Overview makes no network requests, has no analytics and loads no remote code.
+When you install it, Chrome only mentions reading your browsing history (from `tabs`) and managing tab groups. Tab Overview makes no network requests, has no analytics and loads no remote code.
 
 ## Regenerating the screenshots
 
@@ -99,7 +104,7 @@ npm install
 npm run screenshots
 ```
 
-The script starts Chrome in the background with a temporary profile (your own profile isn't touched) and loads the extension from `extension/`. It opens a set of fictional demo sites in two windows, lets the extension capture them, then photographs the overview. Both languages take about a minute, and the images are written to `docs/images/en/` and `docs/images/zh/`.
+The script starts Chrome in the background with a temporary profile (your own profile isn't touched) and loads a copy of the extension from `extension/` with page screenshots already turned on. It opens a set of fictional demo sites in two windows, lets the extension capture them, then photographs the overview. Both languages take about a minute, and the images are written to `docs/images/en/` and `docs/images/zh/`.
 
 - Render one language only: `npm run screenshots -- --lang zh`
 - Use a different Chrome or Chromium build: `CHROME_PATH=/path/to/chrome npm run screenshots`
@@ -116,8 +121,9 @@ tab-overview/
 │   ├── overview.css
 │   ├── overview.js
 │   ├── i18n.js          interface text in English and 简体中文
+│   ├── icons/           extension icon in 16, 32, 48 and 128 px
 │   └── _locales/        name and description shown by Chrome
-├── docs/images/         screenshots used in this README
+├── docs/images/         icon and screenshots used in this README
 ├── tools/screenshots/   script that renders those screenshots
 ├── LICENSE
 ├── README.md

@@ -1,8 +1,8 @@
 // Renders the README screenshots into docs/images/<lang>/.
 //
-// It loads the extension into a throwaway Chrome profile, opens a set of
-// fictional demo sites (demo-sites.js) in two windows, lets the extension
-// capture them, then photographs the overview page.
+// It loads the extension (with screenshots turned on) into a throwaway Chrome
+// profile, opens a set of fictional demo sites (demo-sites.js) in two windows,
+// lets the extension capture them, then photographs the overview page.
 //
 //   npm install
 //   npm run screenshots              # both languages
@@ -53,8 +53,24 @@ function startDemoServer() {
   });
 }
 
+// Screenshots are opt-in: turning them on grants an optional permission through a
+// Chrome dialog that can't be clicked in headless mode. So install a copy of the
+// extension whose manifest asks for that permission up front, which is the same
+// state as a user who switched screenshots on.
+function extensionWithScreenshotsOn(tmp) {
+  const dir = path.join(tmp, 'extension');
+  fs.cpSync(EXTENSION_DIR, dir, { recursive: true });
+  const manifestPath = path.join(dir, 'manifest.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  manifest.host_permissions = manifest.optional_host_permissions;
+  delete manifest.optional_host_permissions;
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+  return dir;
+}
+
 async function launchChrome() {
-  const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tab-overview-screenshots-'));
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'tab-overview-screenshots-'));
+  const userDataDir = path.join(tmp, 'profile');
   const browser = await puppeteer.launch({
     ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : { channel: 'chrome' }),
     headless: true,
@@ -72,7 +88,7 @@ async function launchChrome() {
       '--disable-features=Translate,MediaRouter',
     ],
   });
-  const id = await browser.installExtension(EXTENSION_DIR);
+  const id = await browser.installExtension(extensionWithScreenshotsOn(tmp));
   const workerTarget = await browser.waitForTarget(
     (t) => t.type() === 'service_worker' && t.url().startsWith(`chrome-extension://${id}/`),
   );
@@ -83,7 +99,7 @@ async function launchChrome() {
     overviewUrl: `chrome-extension://${id}/overview.html`,
     async close() {
       await browser.close().catch(() => {});
-      fs.rmSync(userDataDir, { recursive: true, force: true });
+      fs.rmSync(tmp, { recursive: true, force: true });
     },
   };
 }
@@ -180,7 +196,7 @@ async function render(lang, base) {
     await overview.click('#settings-btn');
     await overview.mouse.move(8, 8);
     await sleep(300);
-    await shoot('settings', { clip: { x: 900, y: 0, width: 540, height: 250 } });
+    await shoot('settings', { clip: { x: 900, y: 0, width: 540, height: 330 } });
 
     console.log(`  ${path.relative(ROOT, outDir)}/: ${fs.readdirSync(outDir).join(', ')}`);
   } finally {

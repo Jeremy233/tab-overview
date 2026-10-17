@@ -14,6 +14,11 @@ const capturedAt = new Map(); // tabId -> time of last screenshot
 const shooting = new Map(); // tabId -> screenshot being taken right now
 const timers = new Map(); // windowId -> pending capture timer
 
+// Screenshots are opt-in. Taking them needs access to all sites, an optional
+// permission the user grants or revokes with the switch in the overview's settings.
+const SCREENSHOT_PERMISSION = { origins: ['<all_urls>'] };
+let screenshotsOn = false;
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const thumbKey = (tabId) => `thumb:${tabId}`;
 const isOverview = (tab) => (tab.url || tab.pendingUrl || '').startsWith(OVERVIEW_URL);
@@ -64,10 +69,34 @@ async function makeRoom(bytes) {
   if (drop.length) await chrome.storage.session.remove(drop);
 }
 
+async function clearThumbs() {
+  const keys = Object.keys(await chrome.storage.session.get(null)).filter((key) => key.startsWith('thumb:'));
+  if (keys.length) await chrome.storage.session.remove(keys);
+}
+
+async function syncScreenshotPermission() {
+  screenshotsOn = await chrome.permissions.contains(SCREENSHOT_PERMISSION);
+  if (!screenshotsOn) {
+    // Turned off: forget every screenshot right away.
+    capturedAt.clear();
+    await clearThumbs();
+  }
+}
+
+const screenshotsChecked = syncScreenshotPermission(); // first check, when the worker starts
+async function screenshotsAllowed() {
+  await screenshotsChecked;
+  return screenshotsOn;
+}
+
+chrome.permissions.onAdded.addListener(syncScreenshotPermission);
+chrome.permissions.onRemoved.addListener(syncScreenshotPermission);
+
 async function saveThumb(tabId, shot) {
   try {
     const src = await shrink(shot);
-    if (!capturedAt.has(tabId)) return; // the tab was closed in the meantime
+    // The tab was closed, or screenshots were turned off, in the meantime.
+    if (!capturedAt.has(tabId) || !(await screenshotsAllowed())) return;
     const item = { [thumbKey(tabId)]: { src, at: Date.now() } };
     try {
       await chrome.storage.session.set(item);
@@ -135,7 +164,7 @@ async function shoot(tab) {
 // shrinking and saving continue in the background. A screenshot of the tab
 // that's already being taken is shared.
 async function captureTab(tab, maxAge = 0) {
-  if (!isCapturable(tab)) return;
+  if (!isCapturable(tab) || !(await screenshotsAllowed())) return;
   if (shooting.has(tab.id)) return shooting.get(tab.id);
   if (isFresh(tab.id, maxAge)) return;
   const slot = await claimCaptureSlot();
@@ -149,6 +178,7 @@ async function captureTab(tab, maxAge = 0) {
 }
 
 async function captureWindow(windowId) {
+  if (!(await screenshotsAllowed())) return;
   const [tab] = await chrome.tabs.query({ active: true, windowId }).catch(() => []); // window may be gone
   await captureTab(tab);
 }

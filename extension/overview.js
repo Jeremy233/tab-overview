@@ -7,6 +7,7 @@ const countEl = document.getElementById('count');
 const emptyEl = document.getElementById('empty');
 const settingsBtn = document.getElementById('settings-btn');
 const settingsPanel = document.getElementById('settings');
+const shotsSwitch = document.getElementById('shots-switch');
 
 let selfTab = null;
 let tabs = [];
@@ -24,6 +25,8 @@ const nodes = new Map(); // key -> { node, sig }: card elements kept from earlie
 const shotImgs = new Map(); // tabId -> { shot, img }, so screenshots aren't decoded again
 const closing = new Set(); // tabs we've asked Chrome to close
 
+// Screenshots are opt-in: they need access to all sites, an optional permission.
+const SCREENSHOT_PERMISSION = { origins: ['<all_urls>'] };
 const NO_GROUP = -1; // chrome.tabGroups.TAB_GROUP_ID_NONE
 const MOSAIC_MAX = 9;
 
@@ -544,11 +547,19 @@ async function showShortcut() {
   kbd.textContent = key || t('shortcutNone');
 }
 
+async function showScreenshotsSetting() {
+  shotsSwitch.setAttribute('aria-checked', await chrome.permissions.contains(SCREENSHOT_PERMISSION));
+}
+
 function toggleSettings(open = settingsPanel.hidden) {
   settingsPanel.hidden = !open;
   settingsBtn.setAttribute('aria-expanded', open);
-  if (open) showShortcut();
-  else search.focus({ preventScroll: true });
+  if (open) {
+    showShortcut();
+    showScreenshotsSetting();
+  } else {
+    search.focus({ preventScroll: true });
+  }
 }
 
 settingsBtn.addEventListener('click', (e) => {
@@ -567,6 +578,26 @@ document.addEventListener('click', (e) => {
 for (const btn of settingsPanel.querySelectorAll('[data-lang]')) {
   btn.addEventListener('click', () => chrome.storage.sync.set({ language: btn.dataset.lang }));
 }
+
+// Turning screenshots on asks Chrome for access to all sites (Chrome shows its own
+// confirmation); turning them off gives that access back, and the background
+// worker then deletes every screenshot.
+shotsSwitch.addEventListener('click', async () => {
+  const on = shotsSwitch.getAttribute('aria-checked') !== 'true';
+  shotsSwitch.disabled = true;
+  try {
+    // request() must run straight from the click, before anything is awaited.
+    if (on) await chrome.permissions.request(SCREENSHOT_PERMISSION);
+    else await chrome.permissions.remove(SCREENSHOT_PERMISSION);
+  } catch (err) {
+    console.warn('changing the screenshot permission failed', err);
+  } finally {
+    shotsSwitch.disabled = false;
+    showScreenshotsSetting();
+  }
+});
+chrome.permissions.onAdded.addListener(showScreenshotsSetting);
+chrome.permissions.onRemoved.addListener(showScreenshotsSetting);
 
 document.getElementById('shortcut-change').addEventListener('click', () => {
   chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });

@@ -1,8 +1,10 @@
-# Tab Overview
+<p align="center"><img src="docs/images/icon.png" width="128" height="128" alt=""></p>
 
-[English](README.md) · **简体中文**
+<h1 align="center">Tab Overview</h1>
 
-像 Safari 一样，用缩略图网格一眼看清 Chrome 里打开的所有标签页。按下 <kbd>⌘</kbd><kbd>⇧</kbd><kbd>E</kbd>，找到想要的标签页，直接跳过去。
+<p align="center"><a href="README.md">English</a> · <strong>简体中文</strong></p>
+
+<p align="center">像 Safari 一样，用缩略图网格一眼看清 Chrome 里打开的所有标签页。<br>按下 <kbd>⌘</kbd><kbd>⇧</kbd><kbd>E</kbd>，找到想要的标签页，直接跳过去。</p>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/zh/overview-dark.webp">
@@ -17,7 +19,7 @@
 - **标签页分组**：每个分组折叠成一张卡片，显示组内标签页的拼图；点开即可查看全部。
 - **就地整理**：关闭单个标签页或整个分组，或在任意窗口、分组里新建标签页。
 - **浅色 / 深色**主题跟随系统；界面支持**简体中文和英文**。
-- **注重隐私**：截图只保存在浏览器内存里，不写入硬盘、不上传，关闭 Chrome 后自动清除。
+- **截图需手动开启**：默认关闭，标签页只显示网站图标。在设置里打开后，才会在你浏览时截图；截图只保存在浏览器内存里，不写入硬盘、不上传，关闭 Chrome 后自动清除。
 
 ## 安装
 
@@ -27,6 +29,7 @@
 2. 打开 `chrome://extensions`，打开右上角的 **开发者模式**。
 3. 点 **加载已解压的扩展程序**，选择项目里的 **`extension`** 文件夹。
 4. 可选：点 Chrome 工具栏上的拼图图标，把 **Tab Overview** 固定到工具栏。
+5. 可选：想看到网页缩略图而不只是图标，就打开总览，点齿轮，打开 **页面截图**（见下文[页面截图](#页面截图)）。
 
 需要 Chrome 112 或更高版本。其他基于 Chromium 的浏览器理论上也能用，但还没有测试过。
 
@@ -65,15 +68,17 @@
 
 ### 设置
 
-点右上角的齿轮图标，可以切换界面语言（跟随浏览器、中文或 English），也可以查看和修改快捷键。
+点右上角的齿轮图标，可以切换界面语言（跟随浏览器、中文或 English）、开关页面截图，以及查看和修改快捷键。
 
 <img src="docs/images/zh/settings.webp" alt="设置面板：语言和快捷键" width="540">
 
-## 缩略图是怎么来的
+## 页面截图
 
-Chrome 只允许扩展截取当前显示在屏幕上的那个标签页。所以 Tab Overview 会在你看某个标签页的时候顺手截一张小图：切换过去后不久、页面加载完成后，以及打开总览之前。因此：
+截图**默认关闭**：每个标签页只显示网站图标和域名。想看到网页缩略图，就打开 **设置 → 页面截图**。这时 Chrome 会询问是否允许 Tab Overview *"读取和更改您在所有网站上的所有数据"*：这是 Chrome 允许扩展截取当前标签页的前提，Tab Overview 只用它来截图，不做别的。关掉开关会立即交还这项权限，并删除所有截图。
 
-- 自 Chrome 启动以来还没看过的标签页，会先显示网站图标和域名，看过一次后就有缩略图了。
+开启之后要注意，Chrome 只允许扩展截取当前显示在屏幕上的那个标签页。所以 Tab Overview 会在你看某个标签页的时候顺手截一张小图：切换过去后不久、页面加载完成后，以及打开总览之前。因此：
+
+- 开启截图后（或 Chrome 启动后）还没看过的标签页，会先显示网站图标和域名，看过一次后就有缩略图了。
 - 有些页面无法截图：`chrome://…` 等浏览器内置页面、Chrome 网上应用店，以及本地文件（除非在扩展详情里打开 **允许访问文件网址**）。
 - 缩略图只保存在内存里，上限约 10 MB（大约 180 个标签页）。存满后，最久没看过的标签页的缩略图会先被删掉。关闭 Chrome 后全部清除。
 
@@ -85,9 +90,9 @@ Chrome 只允许扩展截取当前显示在屏幕上的那个标签页。所以 
 | `tabGroups` | 显示标签页分组的名称和颜色 |
 | `storage` | 保存缩略图（仅在内存中）和语言设置 |
 | `favicon` | 从 Chrome 自身的缓存读取网站图标，不发起任何网络请求 |
-| 访问所有网站的数据 | Chrome 要求有这个权限才能截取当前标签页 |
+| 访问所有网站的数据（可选） | 只在你打开页面截图时才会申请：Chrome 要求有这个权限才能截取当前标签页 |
 
-Tab Overview 不发起任何网络请求，没有统计分析，也不加载远程代码。
+安装时 Chrome 只会提示"读取您的浏览记录"（来自 `tabs`）和管理标签页分组。Tab Overview 不发起任何网络请求，没有统计分析，也不加载远程代码。
 
 ## 重新生成截图
 
@@ -99,7 +104,7 @@ npm install
 npm run screenshots
 ```
 
-脚本会在后台用一个临时配置启动 Chrome（不会动你自己的浏览器数据），从 `extension/` 加载扩展，在两个窗口里打开一组虚构的演示网站，等扩展截好缩略图后，再给总览页拍照。中英文两套大约需要一分钟，图片会写入 `docs/images/en/` 和 `docs/images/zh/`。
+脚本会在后台用一个临时配置启动 Chrome（不会动你自己的浏览器数据），从 `extension/` 加载一份已开启页面截图的扩展副本，在两个窗口里打开一组虚构的演示网站，等扩展截好缩略图后，再给总览页拍照。中英文两套大约需要一分钟，图片会写入 `docs/images/en/` 和 `docs/images/zh/`。
 
 - 只生成一种语言：`npm run screenshots -- --lang zh`
 - 使用其他 Chrome 或 Chromium：`CHROME_PATH=/path/to/chrome npm run screenshots`
@@ -116,8 +121,9 @@ tab-overview/
 │   ├── overview.css
 │   ├── overview.js
 │   ├── i18n.js          中英文界面文字
+│   ├── icons/           16、32、48、128 像素的扩展图标
 │   └── _locales/        Chrome 显示的扩展名称和描述
-├── docs/images/         README 里用到的截图
+├── docs/images/         README 里用到的图标和截图
 ├── tools/screenshots/   生成这些截图的脚本
 ├── LICENSE
 ├── README.md

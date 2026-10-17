@@ -3,6 +3,8 @@
 <head>
   <meta charset="utf-8">
   <title></title>
+  <link rel="icon" sizes="16x16" href="icons/icon16.png">
+  <link rel="icon" sizes="32x32" href="icons/icon32.png">
   <link rel="stylesheet" href="overview.css">
 </head>
 <body class="animate">
@@ -27,6 +29,13 @@
           <button type="button" role="radio" data-lang="zh">中文</button>
           <button type="button" role="radio" data-lang="en">English</button>
         </div>
+      </div>
+      <div class="row">
+        <span class="label">
+          <span id="shots-label" data-i18n="screenshots"></span>
+          <small id="shots-hint" class="hint" data-i18n="screenshotsHint"></small>
+        </span>
+        <button id="shots-switch" class="switch" type="button" role="switch" aria-checked="false" aria-labelledby="shots-label" aria-describedby="shots-hint"></button>
       </div>
       <div class="row">
         <span class="label" data-i18n="shortcut"></span>
