@@ -197,7 +197,7 @@ async function render(lang, base) {
     await sleep(400);
     await overview.click('#settings-btn');
     await overview.mouse.move(8, 8);
-    await sleep(300);
+    await sleep(700); // the panel springs open
     await shoot('settings', { clip: { x: 900, y: 0, width: 540, height: 420 } });
 
     // A background picture, with its adjustments open.

@@ -1,0 +1,39 @@
+# Publishes a GitHub release with tab-overview.zip whenever a version tag is pushed:
+#
+#   git tag v0.5.1 && git push origin main v0.5.1
+#
+# The tag has to match "version" in extension/manifest.json.
+
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the tag matches the manifest
+        run: |
+          version=$(jq -r .version extension/manifest.json)
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME doesn't match version $version in extension/manifest.json"
+            exit 1
+          fi
+
+      - name: Zip the extension
+        run: tools/package.sh
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/tab-overview.zip \
+            --title "Tab Overview ${GITHUB_REF_NAME#v}" \
+            --generate-notes

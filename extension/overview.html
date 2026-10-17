@@ -9,19 +9,20 @@
 </head>
 <body class="animate">
   <div id="backdrop" hidden></div>
+  <svg id="glass-filters" width="0" height="0" aria-hidden="true"><defs></defs></svg>
   <header>
-    <div class="search">
+    <div class="search glass">
       <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="M13 13l4 4"/></svg>
       <input id="search" type="text" data-i18n-placeholder="searchPlaceholder" autocomplete="off" spellcheck="false" autofocus>
     </div>
-    <div class="side">
+    <div class="side glass">
       <span id="count"></span>
       <button id="settings-btn" class="icon-btn" type="button" data-i18n-title="settings" aria-haspopup="dialog" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1.08 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
       </button>
     </div>
 
-    <div id="settings" class="settings" role="dialog" aria-labelledby="settings-title" hidden>
+    <div id="settings" class="settings glass" data-bezel="22" data-refract="40" role="dialog" aria-labelledby="settings-title" hidden>
       <div id="settings-main" class="page">
         <h3 id="settings-title" class="page-head" data-i18n="settings"></h3>
         <div id="shots-row" class="row">
@@ -97,7 +98,7 @@
     </div>
   </header>
 
-  <div id="shots-tip" class="tip" hidden>
+  <div id="shots-tip" class="tip glass" hidden>
     <span data-i18n="shotsTip"></span>
     <button id="shots-tip-open" class="link" type="button" data-i18n="shotsTipAction"></button>
     <button id="shots-tip-close" class="tip-close" type="button" data-i18n-title="dismiss">×</button>
@@ -121,7 +122,7 @@
   <main id="windows"></main>
   <p id="empty" data-i18n="noMatches" hidden></p>
 
-  <footer>
+  <footer class="glass">
     <span><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> <span data-i18n="hintSelect"></span></span>
     <span><kbd>⏎</kbd> <span data-i18n="hintOpen"></span></span>
     <span><kbd>esc</kbd> <span data-i18n="hintBack"></span></span>

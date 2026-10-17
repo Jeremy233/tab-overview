@@ -26,15 +26,19 @@
 
 Tab Overview isn't on the Chrome Web Store yet, so install it as an unpacked extension:
 
-1. Get the code: `git clone https://github.com/Jeremy233/tab-overview.git`, or click **Code → Download ZIP** on GitHub and unzip it.
+1. Download **[tab-overview.zip](https://github.com/Jeremy233/tab-overview/releases/latest/download/tab-overview.zip)** from the [latest release](https://github.com/Jeremy233/tab-overview/releases/latest) and unzip it. Put the `tab-overview` folder somewhere it can stay: Chrome loads the extension from that folder every time it starts.
 2. Open `chrome://extensions` and turn on **Developer mode** (top right).
-3. Click **Load unpacked** and select the **`extension`** folder inside the project.
+3. Click **Load unpacked** and select the `tab-overview` folder (the one with `manifest.json` in it).
 4. Optional: click the puzzle-piece icon in Chrome's toolbar and pin **Tab Overview**.
 5. Optional: to see a picture of each page instead of its icon, open the overview, click the gear and turn on **Page thumbnails** (see [Page thumbnails](#page-thumbnails)).
 
 It needs Chrome 112 or later. Other Chromium-based browsers should work too, but haven't been tested.
 
-To find out whether there's a newer version, click **Check for updates** in the overview's settings. To update, pull the latest code (or download it again) and click the reload button ↻ on the extension's card in `chrome://extensions`.
+Prefer working from the source? `git clone https://github.com/Jeremy233/tab-overview.git` and load its `extension` folder instead.
+
+### Updating
+
+Click **Check for updates** in the overview's settings. When there's a new version, **Get update** opens its release: download `tab-overview.zip`, unzip it, and replace the files in your `tab-overview` folder with the new ones. Then click the reload button ↻ on the extension's card in `chrome://extensions`. Keep using the same folder: Chrome tells unpacked extensions apart by their folder, so a new folder would be a separate install without your settings or background picture.
 
 ## How to use it
 
@@ -113,7 +117,7 @@ While it's on, keep in mind that Chrome only lets extensions capture the tab tha
 | `favicon` | Show site icons from Chrome's own cache, without any network requests |
 | Access to all sites (optional) | Only asked for when you turn on page thumbnails: Chrome requires it to capture the visible tab |
 
-When you install it, Chrome only mentions reading your browsing history (from `tabs`) and managing tab groups. Tab Overview has no analytics and loads no remote code. The only network request it ever makes is when you click **Check for updates**: it reads the version number in this repository's `extension/manifest.json` on GitHub.
+When you install it, Chrome only mentions reading your browsing history (from `tabs`) and managing tab groups. Tab Overview has no analytics and loads no remote code. The only network request it ever makes is when you click **Check for updates**: it asks GitHub which version this repository's latest release is.
 
 ## Regenerating the screenshots
 
@@ -131,6 +135,15 @@ The script starts Chrome in the background with a temporary profile (your own pr
 - Use a different Chrome or Chromium build: `CHROME_PATH=/path/to/chrome npm run screenshots`
 - The demo sites live in `tools/screenshots/demo-sites.js`; the tabs, groups and search term are set at the top of `tools/screenshots/render.js`. The background picture, `tools/screenshots/demo-background.jpg`, is generated art made for this project.
 
+## Publishing a release
+
+Each release is a Git tag with `tab-overview.zip` attached, which is what the install steps and **Check for updates** point to.
+
+1. Raise `version` in `extension/manifest.json` and commit.
+2. Tag that commit with the same version and push both: `git tag v0.5.1 && git push origin main v0.5.1`.
+
+The [Release workflow](.github/workflows/release.yml) then checks that the tag matches the manifest, zips `extension/` with `tools/package.sh`, and publishes the release with notes listing the changes since the previous one. To build the zip yourself, run `tools/package.sh`; it's written to `dist/tab-overview.zip`.
+
 ## Project layout
 
 ```
@@ -145,7 +158,10 @@ tab-overview/
 │   ├── icons/           extension icon in 16, 32, 48 and 128 px
 │   └── _locales/        name and description shown by Chrome
 ├── docs/images/         icon and screenshots used in this README
-├── tools/screenshots/   script that renders those screenshots
+├── tools/
+│   ├── package.sh       zips extension/ for a release
+│   └── screenshots/     script that renders the README screenshots
+├── .github/workflows/   publishes a release when a version tag is pushed
 ├── LICENSE
 ├── README.md
 └── README.zh-CN.md

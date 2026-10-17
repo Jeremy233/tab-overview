@@ -601,8 +601,9 @@ document.getElementById('shortcut-key').addEventListener('click', () => openPage
 
 const MANIFEST = chrome.runtime.getManifest();
 const REPO_URL = MANIFEST.homepage_url; // https://github.com/<developer>/<repo>
-// The manifest on GitHub's main branch is the latest release.
-const LATEST_MANIFEST_URL = `${REPO_URL.replace('//github.com/', '//raw.githubusercontent.com/')}/main/extension/manifest.json`;
+// Each GitHub release carries tab-overview.zip; the latest one is the newest version.
+const LATEST_RELEASE_API = `https://api.github.com/repos${new URL(REPO_URL).pathname}/releases/latest`;
+const RELEASES_URL = `${REPO_URL}/releases/latest`;
 const updateStatus = document.getElementById('update-status');
 const checkUpdatesBtn = document.getElementById('check-updates');
 let update = { state: 'idle' }; // idle | checking | latest | available | failed
@@ -640,10 +641,13 @@ async function checkForUpdates() {
   update = { state: 'checking' };
   showUpdateState();
   try {
-    const res = await fetch(LATEST_MANIFEST_URL, { cache: 'no-store', credentials: 'omit' });
+    const res = await fetch(LATEST_RELEASE_API, { cache: 'no-store', credentials: 'omit' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const latest = String((await res.json()).version || '');
-    update = latest && isNewer(latest, MANIFEST.version) ? { state: 'available', version: latest } : { state: 'latest' };
+    const release = await res.json();
+    const latest = String(release.tag_name || '').replace(/^v/, '');
+    update = latest && isNewer(latest, MANIFEST.version)
+      ? { state: 'available', version: latest, url: release.html_url }
+      : { state: 'latest' };
   } catch (err) {
     console.warn('update check failed', err);
     update = { state: 'failed' };
@@ -651,7 +655,7 @@ async function checkForUpdates() {
   showUpdateState();
 }
 
-checkUpdatesBtn.addEventListener('click', () => (update.state === 'available' ? openPage(REPO_URL) : checkForUpdates()));
+checkUpdatesBtn.addEventListener('click', () => (update.state === 'available' ? openPage(update.url || RELEASES_URL) : checkForUpdates()));
 document.getElementById('github').addEventListener('click', () => openPage(REPO_URL));
 
 // ---- page thumbnails ----
@@ -969,6 +973,126 @@ document.getElementById('bg-label').addEventListener('click', openBgPage);
 bgBack.addEventListener('click', () => showSettingsPage(settingsMain, bgMore));
 prefersDark.addEventListener('change', applyBackground);
 
+// ---- liquid glass ----
+//
+// The floating controls are glass (see overview.css). Chrome can run
+// an SVG filter on what's behind an element (backdrop-filter: url()), so each glass
+// element gets one that displaces the backdrop near its rim, the way the curved edge
+// of a thick lens bends light. The displacement map is drawn for the element's size
+// and corner radius, and redrawn when that changes.
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const glassFilters = document.querySelector('#glass-filters defs');
+const glassPanes = new Map(); // element -> its filter nodes and the size it was drawn for
+const glassMaps = new Map(); // "w h radius bezel" -> data URL, so reopening reuses them
+let glassStarted = false;
+
+function svgNode(tag, attrs) {
+  const node = document.createElementNS(SVG_NS, tag);
+  for (const [name, value] of Object.entries(attrs)) node.setAttribute(name, value);
+  return node;
+}
+
+// Red and green say how far to shift the backdrop sideways and up/down (128 = not at
+// all). Inside the rim (`bezel` px wide), each point looks a little further in from the
+// edge, most strongly at the very edge, which magnifies and bends the picture there.
+function glassMap(w, h, radius, bezel) {
+  const key = `${w} ${h} ${radius} ${bezel}`;
+  if (glassMaps.has(key)) return glassMaps.get(key);
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  const image = ctx.createImageData(w, h);
+  const data = image.data;
+  const halfW = w / 2 - radius;
+  const halfH = h / 2 - radius;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const px = x + 0.5 - w / 2;
+      const py = y + 0.5 - h / 2;
+      const qx = Math.abs(px) - halfW;
+      const qy = Math.abs(py) - halfH;
+      // Distance in from the rounded edge, and the direction straight out through it.
+      let inside;
+      let nx = 0;
+      let ny = 0;
+      if (qx > 0 && qy > 0) {
+        const len = Math.hypot(qx, qy);
+        inside = radius - len;
+        nx = qx / len;
+        ny = qy / len;
+      } else if (qx > qy) {
+        inside = radius - qx;
+        nx = 1;
+      } else {
+        inside = radius - qy;
+        ny = 1;
+      }
+      const t = Math.min(1, Math.max(0, inside / bezel));
+      const strength = (1 - t) ** 2;
+      const i = (y * w + x) * 4;
+      data[i] = 128 - 127 * Math.sign(px) * nx * strength;
+      data[i + 1] = 128 - 127 * Math.sign(py) * ny * strength;
+      data[i + 2] = 128;
+      data[i + 3] = 255;
+    }
+  }
+  ctx.putImageData(image, 0, 0);
+  const url = canvas.toDataURL();
+  glassMaps.set(key, url);
+  return url;
+}
+
+async function refract(el) {
+  const pane = glassPanes.get(el);
+  const w = el.offsetWidth;
+  const h = el.offsetHeight;
+  if (!w || !h || (pane.w === w && pane.h === h)) return;
+  pane.w = w;
+  pane.h = h;
+  const radius = Math.min(parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0, w / 2, h / 2);
+  const bezel = Math.max(1, Math.min(Number(el.dataset.bezel) || 16, w / 2, h / 2));
+  const url = glassMap(w, h, radius, bezel);
+  // Until the map is decoded the filter would shift everything, so refract only after.
+  const probe = new Image();
+  probe.src = url;
+  await probe.decode().catch(() => {});
+  if (pane.w !== w || pane.h !== h) return; // resized again meanwhile
+  for (const node of [pane.filter, pane.image]) {
+    node.setAttribute('width', w);
+    node.setAttribute('height', h);
+  }
+  pane.image.setAttribute('href', url);
+  pane.map.setAttribute('scale', el.dataset.refract || 28);
+  el.style.setProperty('--glass-refract', `url(#${pane.filter.id})`);
+}
+
+function startGlass() {
+  if (glassStarted) return;
+  glassStarted = true;
+  const resized = new ResizeObserver((entries) => {
+    for (const entry of entries) refract(entry.target);
+  });
+  document.querySelectorAll('.glass').forEach((el, n) => {
+    const filter = svgNode('filter', {
+      id: `glass-${n}`, x: 0, y: 0, width: 0, height: 0,
+      filterUnits: 'userSpaceOnUse', primitiveUnits: 'userSpaceOnUse', 'color-interpolation-filters': 'sRGB',
+    });
+    const image = svgNode('feImage', { x: 0, y: 0, preserveAspectRatio: 'none', result: 'map' });
+    const map = svgNode('feDisplacementMap', { in: 'SourceGraphic', in2: 'map', xChannelSelector: 'R', yChannelSelector: 'G' });
+    filter.append(image, map);
+    glassFilters.append(filter);
+    glassPanes.set(el, { filter, image, map });
+    resized.observe(el);
+    el.addEventListener('pointermove', (e) => {
+      const box = el.getBoundingClientRect();
+      el.style.setProperty('--mx', `${e.clientX - box.left}px`);
+      el.style.setProperty('--my', `${e.clientY - box.top}px`);
+    });
+  });
+}
+
 // ---- events ----
 
 // While an IME is composing (e.g. typing pinyin), wait for the final text before filtering.
@@ -1086,4 +1210,5 @@ started = Promise.all([
   scrollTo(0, 0);
   updateSelection(true);
   setTimeout(() => document.body.classList.remove('animate'), 300);
+  requestIdleCallback(startGlass, { timeout: 300 }); // the refraction can follow the first paint
 });

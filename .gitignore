@@ -8,3 +8,6 @@
 
 # Dependencies of tools/
 node_modules/
+
+# Release builds (tools/package.sh)
+dist/

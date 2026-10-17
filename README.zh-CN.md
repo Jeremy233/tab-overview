@@ -26,15 +26,19 @@
 
 目前还没有上架 Chrome 网上应用店，需要以"已解压的扩展程序"方式安装：
 
-1. 获取代码：`git clone https://github.com/Jeremy233/tab-overview.git`，或在 GitHub 页面点 **Code → Download ZIP** 下载后解压。
+1. 从[最新版本](https://github.com/Jeremy233/tab-overview/releases/latest)下载 **[tab-overview.zip](https://github.com/Jeremy233/tab-overview/releases/latest/download/tab-overview.zip)** 并解压。把得到的 `tab-overview` 文件夹放在一个不会删掉的地方：Chrome 每次启动都从这个文件夹加载扩展。
 2. 打开 `chrome://extensions`，打开右上角的 **开发者模式**。
-3. 点 **加载已解压的扩展程序**，选择项目里的 **`extension`** 文件夹。
+3. 点 **加载已解压的扩展程序**，选择 `tab-overview` 文件夹（里面有 `manifest.json` 的那个）。
 4. 可选：点 Chrome 工具栏上的拼图图标，把 **Tab Overview** 固定到工具栏。
 5. 可选：想看到网页缩略图而不只是图标，就打开总览，点齿轮，打开 **页面缩略图**（见下文[页面缩略图](#页面缩略图)）。
 
 需要 Chrome 112 或更高版本。其他基于 Chromium 的浏览器理论上也能用，但还没有测试过。
 
-想知道有没有新版本，就在总览页的设置里点 **检查更新**。更新时，拉取最新代码（或重新下载），然后在 `chrome://extensions` 里点这个扩展卡片上的刷新按钮 ↻。
+想直接用源码的话，也可以 `git clone https://github.com/Jeremy233/tab-overview.git`，然后加载其中的 `extension` 文件夹。
+
+### 更新
+
+在总览页的设置里点 **检查更新**。有新版本时点 **去下载**，会打开新版本的发布页：下载 `tab-overview.zip`，解压后用新文件替换掉原来 `tab-overview` 文件夹里的文件，再到 `chrome://extensions` 里点这个扩展卡片上的刷新按钮 ↻。请一直用同一个文件夹：Chrome 是按文件夹区分已解压的扩展的，换一个文件夹就成了另一个扩展，原来的设置和背景图都不会带过去。
 
 ## 使用方法
 
@@ -113,7 +117,7 @@
 | `favicon` | 从 Chrome 自身的缓存读取网站图标，不发起任何网络请求 |
 | 访问所有网站的数据（可选） | 只在你打开页面缩略图时才会申请：Chrome 要求有这个权限才能截取当前标签页 |
 
-安装时 Chrome 只会提示"读取您的浏览记录"（来自 `tabs`）和管理标签页分组。Tab Overview 没有统计分析，也不加载远程代码。它唯一会发起的网络请求，是在你点 **检查更新** 时，去 GitHub 读取本仓库 `extension/manifest.json` 里的版本号。
+安装时 Chrome 只会提示"读取您的浏览记录"（来自 `tabs`）和管理标签页分组。Tab Overview 没有统计分析，也不加载远程代码。它唯一会发起的网络请求，是在你点 **检查更新** 时，向 GitHub 查询本仓库最新发布的版本号。
 
 ## 重新生成截图
 
@@ -131,6 +135,15 @@ npm run screenshots
 - 使用其他 Chrome 或 Chromium：`CHROME_PATH=/path/to/chrome npm run screenshots`
 - 演示网站在 `tools/screenshots/demo-sites.js` 里；要打开哪些标签页、怎么分组、搜什么词，在 `tools/screenshots/render.js` 开头设置。背景图 `tools/screenshots/demo-background.jpg` 是为本项目生成的图片。
 
+## 发布新版本
+
+每个版本就是一个 Git 标签，附带 `tab-overview.zip`，安装步骤和 **检查更新** 都指向它。
+
+1. 改大 `extension/manifest.json` 里的 `version`，然后提交。
+2. 给这个提交打上同样版本号的标签，并一起推送：`git tag v0.5.1 && git push origin main v0.5.1`。
+
+[Release 工作流](.github/workflows/release.yml)会检查标签和 manifest 里的版本号是否一致，用 `tools/package.sh` 把 `extension/` 打成压缩包，然后发布这个版本，并自动列出自上个版本以来的改动。想自己打包的话，运行 `tools/package.sh`，压缩包会生成在 `dist/tab-overview.zip`。
+
 ## 项目结构
 
 ```
@@ -145,7 +158,10 @@ tab-overview/
 │   ├── icons/           16、32、48、128 像素的扩展图标
 │   └── _locales/        Chrome 显示的扩展名称和描述
 ├── docs/images/         README 里用到的图标和截图
-├── tools/screenshots/   生成这些截图的脚本
+├── tools/
+│   ├── package.sh       把 extension/ 打成发布用的压缩包
+│   └── screenshots/     生成 README 截图的脚本
+├── .github/workflows/   推送版本标签时自动发布新版本
 ├── LICENSE
 ├── README.md
 └── README.zh-CN.md

@@ -8,6 +8,15 @@
   --accent: #007aff;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 6px 20px rgba(0, 0, 0, 0.06);
   --close-bg: rgba(0, 0, 0, 0.55);
+  /* Liquid glass (see the end of this file) */
+  --glass-tint: rgba(255, 255, 255, 0.6);
+  --glass-text: #1c1c1e;
+  --glass-muted: rgba(28, 28, 30, 0.6);
+  --glass-rim: rgba(255, 255, 255, 0.95);
+  --glass-rim-soft: rgba(255, 255, 255, 0.55);
+  --glass-glow: rgba(255, 255, 255, 0.35);
+  --glass-shade: rgba(0, 0, 0, 0.12);
+  --glass-hover: rgba(255, 255, 255, 0.6);
   /* Chrome's tab group colors */
   --g-grey: #5f6368;
   --g-blue: #1a73e8;
@@ -31,6 +40,14 @@
     --accent: #0a84ff;
     --shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.3);
     --close-bg: rgba(0, 0, 0, 0.7);
+    --glass-tint: rgba(38, 38, 42, 0.66);
+    --glass-text: #f2f2f7;
+    --glass-muted: rgba(242, 242, 247, 0.66);
+    --glass-rim: rgba(255, 255, 255, 0.45);
+    --glass-rim-soft: rgba(255, 255, 255, 0.14);
+    --glass-glow: rgba(255, 255, 255, 0.06);
+    --glass-shade: rgba(0, 0, 0, 0.35);
+    --glass-hover: rgba(255, 255, 255, 0.12);
     --g-grey: #dadce0;
     --g-blue: #8ab4f8;
     --g-red: #f28b82;
@@ -66,54 +83,63 @@ header {
   align-items: center;
   gap: 16px;
   padding: 20px 32px 16px;
-  background: color-mix(in srgb, var(--bg) 82%, transparent);
-  backdrop-filter: saturate(180%) blur(20px);
+  /* No bar: the search field and the controls float as glass over the page. */
 }
 
 .search {
+  --glass-blur: 10px;
   position: relative;
   grid-column: 2;
+  height: 38px;
+  border-radius: 19px;
 }
+
+.search:focus-within { outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: 2px; }
 
 .search svg {
   position: absolute;
-  left: 10px;
+  z-index: 1; /* above the field, which has its own layer */
+  left: 14px;
   top: 50%;
   width: 15px;
   height: 15px;
   transform: translateY(-50%);
   fill: none;
-  stroke: var(--muted);
+  stroke: var(--glass-muted);
   stroke-width: 2;
   stroke-linecap: round;
 }
 
 #search {
   width: 100%;
-  height: 34px;
-  padding: 0 12px 0 32px;
+  height: 100%;
+  padding: 0 14px 0 38px;
   border: 0;
-  border-radius: 10px;
-  background: var(--field);
-  color: var(--text);
+  border-radius: inherit;
+  background: transparent;
+  color: var(--glass-text);
   font: inherit;
   font-size: 14px;
   outline: none;
 }
 
-#search:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
-#search::placeholder { color: var(--muted); }
+#search::placeholder { color: var(--glass-muted); }
 
 .side {
+  --glass-blur: 10px;
+  position: relative;
   grid-column: 3;
   justify-self: end;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
+  height: 38px;
+  padding: 0 3px 0 14px;
+  border-radius: 19px;
 }
 
 #count {
-  color: var(--muted);
+  color: var(--glass-muted);
   font-size: 12px;
 }
 
@@ -152,9 +178,7 @@ header {
   right: 32px;
   width: 340px;
   padding: 4px 16px;
-  border-radius: 12px;
-  background: var(--card);
-  box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--muted) 30%, transparent), 0 12px 40px rgba(0, 0, 0, 0.25);
+  border-radius: 22px;
 }
 
 .page-head {
@@ -432,6 +456,7 @@ header {
 }
 
 #backdrop[hidden] { display: none; }
+#glass-filters { position: absolute; }
 @keyframes fade-in { from { opacity: 0; } }
 
 /* Text drawn straight on the picture takes a color that reads on it. */
@@ -468,10 +493,76 @@ body.has-bg .new-tab .thumb { border-color: color-mix(in srgb, var(--on-bg-muted
 body.has-bg .new-tab:hover { color: var(--accent); }
 body.has-bg .new-tab:hover .thumb { border-color: var(--accent); }
 
-body.has-bg .tip {
-  background: color-mix(in srgb, var(--card) 82%, transparent);
-  backdrop-filter: blur(20px);
+/* ---- liquid glass ----
+   The search field, the controls beside it, the key hints, the tip and the settings
+   panel float as glass: a tint in the page's color (so their text reads over anything
+   that scrolls beneath), a bright rim where the light catches the edge, a soft inner
+   glow, and what's behind refracted near the rim (an SVG displacement filter that
+   overview.js sizes to each element and passes in as --glass-refract). */
+
+.glass {
+  isolation: isolate;
+  background: var(--glass-tint);
+  backdrop-filter: blur(var(--glass-blur, 10px)) var(--glass-refract,) saturate(170%) brightness(1.05);
+  box-shadow:
+    inset 0 0 0 0.5px var(--glass-rim-soft),
+    inset 0 0 16px var(--glass-glow),
+    0 8px 28px var(--glass-shade),
+    0 1px 3px var(--glass-shade);
 }
+
+/* The rim: bright at the top left and bottom right, fading out in between. */
+.glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 1.25px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, var(--glass-rim), transparent 30%, transparent 70%, var(--glass-rim-soft));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* A highlight that follows the pointer across the glass. */
+.glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: radial-gradient(160px circle at var(--mx, 50%) var(--my, 0%), var(--glass-hover), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+
+.glass:hover::before { opacity: 1; }
+
+#settings-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--glass-text);
+  transition: transform 0.35s cubic-bezier(0.3, 1.7, 0.5, 1);
+}
+
+#settings-btn:hover,
+#settings-btn[aria-expanded="true"] { background: var(--glass-hover); color: var(--glass-text); }
+#settings-btn:active { transform: scale(0.88); }
+
+footer.glass { --glass-blur: 12px; }
+
+/* The settings panel is thicker glass. It grows out of the gear when opened. */
+.settings.glass {
+  --glass-blur: 28px;
+  --glass-tint: color-mix(in srgb, var(--card) 62%, transparent);
+  transform-origin: calc(100% - 20px) -10px;
+  animation: glass-pop 0.4s cubic-bezier(0.2, 1.25, 0.35, 1);
+}
+
+@keyframes glass-pop { from { opacity: 0; transform: scale(0.86); } }
 
 /* ---- the first-time question about thumbnails ---- */
 
@@ -544,9 +635,9 @@ body.has-bg .tip {
   max-width: calc(100% - 64px);
   margin: 4px auto 8px;
   padding: 5px 6px 5px 14px;
-  border-radius: 10px;
-  background: var(--field);
-  color: var(--muted);
+  position: relative;
+  border-radius: 999px;
+  color: var(--glass-muted);
   font-size: 12px;
 }
 
@@ -560,13 +651,13 @@ body.has-bg .tip {
   border: 0;
   border-radius: 50%;
   background: none;
-  color: var(--muted);
+  color: var(--glass-muted);
   font-size: 15px;
   line-height: 1;
   cursor: pointer;
 }
 
-.tip-close:hover { background: var(--field); color: var(--text); }
+.tip-close:hover { background: var(--glass-hover); color: var(--glass-text); }
 
 /* Draws the eye to the screenshots switch when the tip opens settings. */
 .settings .row.flash {
@@ -842,12 +933,9 @@ footer {
   transform: translateX(-50%);
   display: flex;
   gap: 16px;
-  padding: 6px 14px;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--card) 85%, transparent);
-  backdrop-filter: blur(20px);
-  box-shadow: var(--shadow);
-  color: var(--muted);
+  padding: 7px 18px;
+  border-radius: 999px;
+  color: var(--glass-muted);
   font-size: 12px;
   white-space: nowrap;
 }
