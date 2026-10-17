@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Tab Overview",
+  "version": "0.3.0",
+  "description": "__MSG_description__",
+  "default_locale": "en",
+  "permissions": ["tabs", "tabGroups", "storage", "favicon"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "__MSG_actionTitle__"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+E",
+        "mac": "Command+Shift+E"
+      },
+      "description": "__MSG_actionTitle__"
+    }
+  }
+}

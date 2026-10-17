@@ -1,0 +1,53 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title></title>
+  <link rel="stylesheet" href="overview.css">
+</head>
+<body class="animate">
+  <header>
+    <div class="search">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="M13 13l4 4"/></svg>
+      <input id="search" type="text" data-i18n-placeholder="searchPlaceholder" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="side">
+      <span id="count"></span>
+      <button id="settings-btn" class="icon-btn" type="button" data-i18n-title="settings" aria-haspopup="dialog" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1.08 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+      </button>
+    </div>
+
+    <div id="settings" class="settings" role="dialog" hidden>
+      <h3 data-i18n="settings"></h3>
+      <div class="row">
+        <span class="label" data-i18n="language"></span>
+        <div class="segmented" role="radiogroup">
+          <button type="button" data-lang="auto" data-i18n="langAuto"></button>
+          <button type="button" data-lang="zh">中文</button>
+          <button type="button" data-lang="en">English</button>
+        </div>
+      </div>
+      <div class="row">
+        <span class="label" data-i18n="shortcut"></span>
+        <span class="shortcut">
+          <kbd id="shortcut-key"></kbd>
+          <button id="shortcut-change" class="link" type="button" data-i18n="changeShortcut"></button>
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <main id="windows"></main>
+  <p id="empty" data-i18n="noMatches" hidden></p>
+
+  <footer>
+    <span><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> <span data-i18n="hintSelect"></span></span>
+    <span><kbd>⏎</kbd> <span data-i18n="hintOpen"></span></span>
+    <span><kbd>esc</kbd> <span data-i18n="hintBack"></span></span>
+  </footer>
+
+  <script src="i18n.js"></script>
+  <script src="overview.js"></script>
+</body>
+</html>
