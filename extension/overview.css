@@ -48,11 +48,13 @@
 html, body {
   margin: 0;
   min-height: 100%;
-  background: var(--bg);
   color: var(--text);
   font: 13px/1.4 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
   -webkit-font-smoothing: antialiased;
 }
+
+/* On the root only: a body background would paint over the background picture. */
+html { background: var(--bg); }
 
 header {
   position: sticky;
@@ -148,37 +150,67 @@ header {
   position: absolute;
   top: calc(100% - 6px);
   right: 32px;
-  width: 320px;
-  padding: 14px 16px 6px;
+  width: 340px;
+  padding: 4px 16px;
   border-radius: 12px;
   background: var(--card);
   box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--muted) 30%, transparent), 0 12px 40px rgba(0, 0, 0, 0.25);
 }
 
-.settings h3 {
-  margin: 0 0 10px;
+.page-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 40px;
+  margin: 0;
   font-size: 13px;
   font-weight: 600;
 }
 
+.page-head h3 {
+  flex: 1;
+  margin: 0;
+  font: inherit;
+}
+
+/* Every setting is one row of the same height. */
 .settings .row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 0;
+  height: 46px;
   border-top: 0.5px solid color-mix(in srgb, var(--muted) 30%, transparent);
 }
 
-.settings .label { color: var(--text); }
-
-.settings .hint {
-  display: block;
-  margin-top: 3px;
-  color: var(--muted);
-  font-size: 11.5px;
-  line-height: 1.4;
+.settings .label {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
+
+.controls {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.status {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.status.error { margin-left: 6px; color: #ff3b30; }
+.status[hidden] { display: none; }
+
+.page.enter-forward { animation: page-forward 0.18s ease; }
+.page.enter-back { animation: page-back 0.18s ease; }
+@keyframes page-forward { from { opacity: 0; transform: translateX(14px); } }
+@keyframes page-back { from { opacity: 0; transform: translateX(-14px); } }
 
 .switch {
   position: relative;
@@ -235,7 +267,6 @@ header {
   font-weight: 600;
 }
 
-.settings .hint[hidden] { display: none; }
 .settings .value { margin-left: 4px; color: var(--muted); }
 
 /* The current shortcut, drawn as a key; clicking it opens Chrome's shortcut settings. */
@@ -274,7 +305,223 @@ header {
 
 .pill:hover { background: color-mix(in srgb, var(--muted) 30%, transparent); }
 .pill:disabled { cursor: progress; opacity: 0.6; }
+.pill[hidden] { display: none; }
 .pill svg { width: 14px; height: 14px; fill: currentColor; }
+.pill.primary { background: var(--accent); color: #fff; font-weight: 600; }
+.pill.primary:hover { background: color-mix(in srgb, var(--accent) 85%, #000); }
+
+/* ---- background setting ---- */
+
+#bg-label { cursor: pointer; }
+
+/* The chosen picture, small; clicking it picks another. */
+.bg-thumb {
+  position: relative;
+  flex: none;
+  width: 46px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: center / cover no-repeat;
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--muted) 45%, transparent);
+  cursor: pointer;
+}
+
+.bg-thumb:not(.has-image) {
+  border: 1.5px dashed color-mix(in srgb, var(--muted) 60%, transparent);
+  box-shadow: none;
+  color: var(--muted);
+}
+
+.bg-thumb:not(.has-image)::before {
+  content: "+";
+  font-size: 18px;
+  font-weight: 300;
+  line-height: 24px;
+}
+
+.bg-thumb:hover { box-shadow: 0 0 0 2px var(--accent); }
+.bg-thumb:not(.has-image):hover { border-color: var(--accent); color: var(--accent); box-shadow: none; }
+.bg-thumb.busy { cursor: progress; opacity: 0.5; }
+
+.chevron {
+  flex: none;
+  width: 24px;
+  height: 28px;
+  margin-right: -6px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.chevron.back { margin: 0 0 0 -6px; color: var(--accent); }
+.chevron:hover { background: var(--field); color: var(--text); }
+
+.chevron svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.slider-row .label { flex: none; width: 76px; }
+
+.slider-row output {
+  flex: none;
+  width: 38px;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.slider {
+  --fill: 50%;
+  flex: 1;
+  min-width: 0;
+  height: 22px;
+  margin: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--accent) var(--fill), color-mix(in srgb, var(--muted) 35%, transparent) var(--fill));
+}
+
+.slider::-webkit-slider-thumb {
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  -webkit-appearance: none;
+  appearance: none;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.slider:focus-visible { outline: none; }
+.slider:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 40%, transparent), 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.slider:disabled { cursor: default; opacity: 0.4; }
+
+/* The picture itself, behind everything. Its filter and opacity are set from the sliders. */
+#backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: center / cover no-repeat;
+  will-change: transform; /* its own layer: scrolling and the sliders don't repaint it */
+  animation: fade-in 0.2s ease-out;
+}
+
+#backdrop[hidden] { display: none; }
+@keyframes fade-in { from { opacity: 0; } }
+
+/* Text drawn straight on the picture takes a color that reads on it. */
+body.bg-dark {
+  --on-bg: #fff;
+  --on-bg-muted: rgba(255, 255, 255, 0.82);
+  --on-bg-shadow: 0 1px 2px rgba(0, 0, 0, 0.55), 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+body.bg-light {
+  --on-bg: #1c1c1e;
+  --on-bg-muted: rgba(28, 28, 30, 0.72);
+  --on-bg-shadow: 0 0 2px rgba(255, 255, 255, 0.7), 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+body.has-bg .window h2,
+body.has-bg #empty,
+body.has-bg .new-tab {
+  color: var(--on-bg-muted);
+  text-shadow: var(--on-bg-shadow);
+}
+
+body.has-bg .meta,
+body.has-bg .group-header .name,
+body.has-bg .group-header .back {
+  color: var(--on-bg);
+  text-shadow: var(--on-bg-shadow);
+}
+
+body.has-bg .new-tab .meta { color: inherit; }
+body.has-bg .meta .badge { color: var(--on-bg-muted); }
+body.has-bg .meta .count { background: color-mix(in srgb, var(--card) 80%, transparent); color: var(--text); text-shadow: none; }
+body.has-bg .new-tab .thumb { border-color: color-mix(in srgb, var(--on-bg-muted) 65%, transparent); }
+body.has-bg .new-tab:hover { color: var(--accent); }
+body.has-bg .new-tab:hover .thumb { border-color: var(--accent); }
+
+body.has-bg .tip {
+  background: color-mix(in srgb, var(--card) 82%, transparent);
+  backdrop-filter: blur(20px);
+}
+
+/* ---- the first-time question about thumbnails ---- */
+
+.consent {
+  width: min(440px, calc(100% - 32px));
+  padding: 24px 24px 20px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--card);
+  color: var(--text);
+  box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--muted) 30%, transparent), 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+.consent[open] { animation: pop-in 0.16s ease-out; }
+.consent::backdrop { background: rgba(0, 0, 0, 0.35); }
+@keyframes pop-in { from { opacity: 0; transform: scale(0.96); } }
+
+.consent img { display: block; margin-bottom: 12px; }
+
+.consent h2 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.consent p,
+.consent li {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.consent ul {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding-left: 18px;
+}
+
+.consent li[hidden] { display: none; }
+
+.consent .actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.consent .pill { padding: 5px 16px; font-size: 13px; }
 
 .link {
   padding: 0;

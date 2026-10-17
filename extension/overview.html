@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="overview.css">
 </head>
 <body class="animate">
+  <div id="backdrop" hidden></div>
   <header>
     <div class="search">
       <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="M13 13l4 4"/></svg>
@@ -21,37 +22,78 @@
     </div>
 
     <div id="settings" class="settings" role="dialog" aria-labelledby="settings-title" hidden>
-      <h3 id="settings-title" data-i18n="settings"></h3>
-      <div class="row">
-        <span id="language-label" class="label" data-i18n="language"></span>
-        <div class="segmented" role="radiogroup" aria-labelledby="language-label">
-          <button type="button" role="radio" data-lang="auto" data-i18n="langAuto"></button>
-          <button type="button" role="radio" data-lang="zh">中文</button>
-          <button type="button" role="radio" data-lang="en">English</button>
+      <div id="settings-main" class="page">
+        <h3 id="settings-title" class="page-head" data-i18n="settings"></h3>
+        <div id="shots-row" class="row">
+          <span id="shots-label" class="label" data-i18n="thumbnails"></span>
+          <button id="shots-switch" class="switch" type="button" role="switch" aria-checked="false" aria-labelledby="shots-label"></button>
+        </div>
+        <div class="row">
+          <span class="label" data-i18n="shortcut"></span>
+          <button id="shortcut-key" class="key" type="button" data-i18n-title="changeShortcut"></button>
+        </div>
+        <div id="bg-row" class="row">
+          <span class="label">
+            <span id="bg-label" data-i18n="background"></span>
+            <span id="bg-error" class="status error" role="alert" hidden></span>
+          </span>
+          <span class="controls">
+            <button id="bg-thumb" class="bg-thumb" type="button"></button>
+            <button id="bg-switch" class="switch" type="button" role="switch" aria-checked="false" aria-labelledby="bg-label"></button>
+            <button id="bg-more" class="chevron" type="button" data-i18n-title="bgAdjust" data-i18n-label="bgAdjust"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5"/></svg></button>
+          </span>
+        </div>
+        <div class="row">
+          <span id="language-label" class="label" data-i18n="language"></span>
+          <div class="segmented" role="radiogroup" aria-labelledby="language-label">
+            <button type="button" role="radio" data-lang="auto" data-i18n="langAuto"></button>
+            <button type="button" role="radio" data-lang="zh">中文</button>
+            <button type="button" role="radio" data-lang="en">English</button>
+          </div>
+        </div>
+        <div class="row">
+          <span class="label"><span data-i18n="version"></span> <span id="version" class="value"></span></span>
+          <span class="controls">
+            <span id="update-status" class="status" role="status"></span>
+            <button id="check-updates" class="pill" type="button"></button>
+          </span>
+        </div>
+        <div class="row">
+          <span class="label"><span data-i18n="developer"></span> <span id="developer" class="value"></span></span>
+          <button id="github" class="pill" type="button"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0c4.42 0 8 3.58 8 8a8.01 8.01 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82a7.6 7.6 0 0 0-4 0c-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A8 8 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>GitHub</button>
         </div>
       </div>
-      <div id="shots-row" class="row">
-        <span class="label">
-          <span id="shots-label" data-i18n="screenshots"></span>
-          <small id="shots-hint" class="hint" data-i18n="screenshotsHint"></small>
-        </span>
-        <button id="shots-switch" class="switch" type="button" role="switch" aria-checked="false" aria-labelledby="shots-label" aria-describedby="shots-hint"></button>
+
+      <div id="settings-bg" class="page" hidden>
+        <div class="page-head">
+          <button id="bg-back" class="chevron back" type="button" data-i18n-title="back" data-i18n-label="back"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3.5 5.5 8 10 12.5"/></svg></button>
+          <h3 id="bg-title" data-i18n="background"></h3>
+          <button id="bg-reset" class="link" type="button" data-i18n="bgReset"></button>
+        </div>
+        <div class="row">
+          <span class="label" data-i18n="bgImage"></span>
+          <span class="controls">
+            <button id="bg-remove" class="pill" type="button" data-i18n="bgRemove"></button>
+            <button id="bg-change" class="pill" type="button"></button>
+          </span>
+        </div>
+        <label class="row slider-row">
+          <span class="label" data-i18n="brightness"></span>
+          <input class="slider" type="range" min="20" max="150" step="1" data-setting="brightness">
+          <output class="value"></output>
+        </label>
+        <label class="row slider-row">
+          <span class="label" data-i18n="opacity"></span>
+          <input class="slider" type="range" min="10" max="100" step="1" data-setting="opacity">
+          <output class="value"></output>
+        </label>
+        <label class="row slider-row">
+          <span class="label" data-i18n="blur"></span>
+          <input class="slider" type="range" min="0" max="40" step="1" data-setting="blur">
+          <output class="value"></output>
+        </label>
       </div>
-      <div class="row">
-        <span class="label" data-i18n="shortcut"></span>
-        <button id="shortcut-key" class="key" type="button" data-i18n-title="changeShortcut"></button>
-      </div>
-      <div class="row">
-        <span class="label">
-          <span data-i18n="version"></span> <span id="version" class="value"></span>
-          <small id="update-status" class="hint" role="status" hidden></small>
-        </span>
-        <button id="check-updates" class="pill" type="button" data-i18n="checkUpdates"></button>
-      </div>
-      <div class="row">
-        <span class="label"><span data-i18n="developer"></span> <span id="developer" class="value"></span></span>
-        <button id="github" class="pill" type="button"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0c4.42 0 8 3.58 8 8a8.01 8.01 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82a7.6 7.6 0 0 0-4 0c-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A8 8 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>GitHub</button>
-      </div>
+      <input id="bg-file" type="file" accept="image/*" hidden>
     </div>
   </header>
 
@@ -60,6 +102,21 @@
     <button id="shots-tip-open" class="link" type="button" data-i18n="shotsTipAction"></button>
     <button id="shots-tip-close" class="tip-close" type="button" data-i18n-title="dismiss">×</button>
   </div>
+
+  <dialog id="consent" class="consent" aria-labelledby="consent-title" aria-describedby="consent-intro">
+    <img src="icons/icon48.png" width="40" height="40" alt="">
+    <h2 id="consent-title" data-i18n="consentTitle"></h2>
+    <p id="consent-intro" data-i18n="consentIntro"></p>
+    <ul>
+      <li data-i18n="consentMemory"></li>
+      <li id="consent-permission" data-i18n="consentPermission"></li>
+      <li data-i18n="consentOff"></li>
+    </ul>
+    <div class="actions">
+      <button id="consent-decline" class="pill" type="button" data-i18n="decline"></button>
+      <button id="consent-accept" class="pill primary" type="button" data-i18n="accept" autofocus></button>
+    </div>
+  </dialog>
 
   <main id="windows"></main>
   <p id="empty" data-i18n="noMatches" hidden></p>

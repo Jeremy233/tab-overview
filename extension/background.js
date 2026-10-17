@@ -14,8 +14,10 @@ const capturedAt = new Map(); // tabId -> time of last screenshot
 const shooting = new Map(); // tabId -> screenshot being taken right now
 const timers = new Map(); // windowId -> pending capture timer
 
-// Screenshots are opt-in. Taking them needs access to all sites, an optional
-// permission the user grants or revokes with the switch in the overview's settings.
+// Thumbnails are opt-in. Taking them needs access to all sites, an optional
+// permission granted the first time they're turned on in the overview's settings.
+// Turning them off later keeps that permission (so turning them back on needs no
+// new prompt) and sets `thumbnailsOff` in storage.local instead.
 const SCREENSHOT_PERMISSION = { origins: ['<all_urls>'] };
 let screenshotsOn = false;
 
@@ -74,8 +76,15 @@ async function clearThumbs() {
   if (keys.length) await chrome.storage.session.remove(keys);
 }
 
-async function syncScreenshotPermission() {
-  screenshotsOn = await chrome.permissions.contains(SCREENSHOT_PERMISSION);
+let syncSeq = 0;
+async function syncScreenshotSetting() {
+  const seq = ++syncSeq;
+  const [granted, { thumbnailsOff }] = await Promise.all([
+    chrome.permissions.contains(SCREENSHOT_PERMISSION),
+    chrome.storage.local.get('thumbnailsOff'),
+  ]);
+  if (seq !== syncSeq) return; // a later change is being applied
+  screenshotsOn = granted && !thumbnailsOff;
   if (!screenshotsOn) {
     // Turned off: forget every screenshot right away.
     capturedAt.clear();
@@ -83,14 +92,17 @@ async function syncScreenshotPermission() {
   }
 }
 
-const screenshotsChecked = syncScreenshotPermission(); // first check, when the worker starts
+const screenshotsChecked = syncScreenshotSetting(); // first check, when the worker starts
 async function screenshotsAllowed() {
   await screenshotsChecked;
   return screenshotsOn;
 }
 
-chrome.permissions.onAdded.addListener(syncScreenshotPermission);
-chrome.permissions.onRemoved.addListener(syncScreenshotPermission);
+chrome.permissions.onAdded.addListener(syncScreenshotSetting);
+chrome.permissions.onRemoved.addListener(syncScreenshotSetting);
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes.thumbnailsOff) syncScreenshotSetting();
+});
 
 async function saveThumb(tabId, shot) {
   try {

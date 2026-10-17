@@ -1,8 +1,9 @@
 // Renders the README screenshots into docs/images/<lang>/.
 //
-// It loads the extension (with screenshots turned on) into a throwaway Chrome
+// It loads the extension (with page thumbnails turned on) into a throwaway Chrome
 // profile, opens a set of fictional demo sites (demo-sites.js) in two windows,
-// lets the extension capture them, then photographs the overview page.
+// lets the extension capture them, then photographs the overview page. The
+// background picture (demo-background.jpg) is generated art, free to use.
 //
 //   npm install
 //   npm run screenshots              # both languages
@@ -22,6 +23,7 @@ const { demoPage } = require('./demo-sites');
 const ROOT = path.resolve(__dirname, '../..');
 const EXTENSION_DIR = path.join(ROOT, 'extension');
 const OUT_DIR = path.join(ROOT, 'docs/images');
+const BACKGROUND = path.join(__dirname, 'demo-background.jpg');
 
 // Window 1, in tab order, then window 2.
 const WINDOW_1 = ['mail', 'news', 'recipe', 'docs', 'pr', 'cal', 'stats', 'weather', 'hotel', 'photos', 'music', 'board'];
@@ -53,10 +55,10 @@ function startDemoServer() {
   });
 }
 
-// Screenshots are opt-in: turning them on grants an optional permission through a
+// Thumbnails are opt-in: turning them on grants an optional permission through a
 // Chrome dialog that can't be clicked in headless mode. So install a copy of the
 // extension whose manifest asks for that permission up front, which is the same
-// state as a user who switched screenshots on.
+// state as a user who switched thumbnails on.
 function extensionWithScreenshotsOn(tmp) {
   const dir = path.join(tmp, 'extension');
   fs.cpSync(EXTENSION_DIR, dir, { recursive: true });
@@ -196,7 +198,17 @@ async function render(lang, base) {
     await overview.click('#settings-btn');
     await overview.mouse.move(8, 8);
     await sleep(300);
-    await shoot('settings', { clip: { x: 900, y: 0, width: 540, height: 410 } });
+    await shoot('settings', { clip: { x: 900, y: 0, width: 540, height: 420 } });
+
+    // A background picture, with its adjustments open.
+    const [chooser] = await Promise.all([overview.waitForFileChooser(), overview.click('#bg-thumb')]);
+    await chooser.accept([BACKGROUND]);
+    await overview.waitForFunction(() => document.getElementById('backdrop').style.backgroundImage.includes('blob:'));
+    await overview.click('#bg-more');
+    await overview.setViewport({ width: 1440, height: 830, deviceScaleFactor: 2 });
+    await overview.mouse.move(8, 8);
+    await sleep(800);
+    await shoot('background');
 
     console.log(`  ${path.relative(ROOT, outDir)}/: ${fs.readdirSync(outDir).join(', ')}`);
   } finally {
