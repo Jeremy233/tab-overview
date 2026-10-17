@@ -8,7 +8,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/en/overview-dark.webp">
-  <img src="docs/images/en/overview.webp" alt="Tab Overview: every open tab as a thumbnail, grouped by window, with tab groups shown as mosaics">
+  <img src="docs/images/en/overview.webp" alt="Tab Overview: every open tab as a thumbnail, grouped by window, with tab groups shown as mosaics, over a background picture">
 </picture>
 
 ## Features
@@ -129,7 +129,7 @@ npm install
 npm run screenshots
 ```
 
-The script starts Chrome in the background with a temporary profile (your own profile isn't touched) and loads a copy of the extension from `extension/` with page thumbnails already turned on. It opens a set of fictional demo sites in two windows, lets the extension capture them, then photographs the overview. Both languages take about a minute, and the images are written to `docs/images/en/` and `docs/images/zh/`.
+The script starts Chrome in the background with a temporary profile (your own profile isn't touched) and loads a copy of the extension from `extension/` with page thumbnails already turned on. It opens a set of fictional demo sites in two windows, lets the extension capture them, sets the demo background picture, then photographs the overview. Every screenshot uses that picture, so they all look alike; without one, the overview sits on a plain light or dark page. Both languages take about a minute, and the images are written to `docs/images/en/` and `docs/images/zh/`.
 
 - Render one language only: `npm run screenshots -- --lang zh`
 - Use a different Chrome or Chromium build: `CHROME_PATH=/path/to/chrome npm run screenshots`

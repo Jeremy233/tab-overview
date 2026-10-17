@@ -8,7 +8,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/zh/overview-dark.webp">
-  <img src="docs/images/zh/overview.webp" alt="Tab Overview：所有标签页以缩略图显示，按窗口分区，标签页分组显示为拼图">
+  <img src="docs/images/zh/overview.webp" alt="Tab Overview：所有标签页以缩略图显示，按窗口分区，标签页分组显示为拼图，背景是一张图片">
 </picture>
 
 ## 功能
@@ -129,7 +129,7 @@ npm install
 npm run screenshots
 ```
 
-脚本会在后台用一个临时配置启动 Chrome（不会动你自己的浏览器数据），从 `extension/` 加载一份已开启页面缩略图的扩展副本，在两个窗口里打开一组虚构的演示网站，等扩展截好缩略图后，再给总览页拍照。中英文两套大约需要一分钟，图片会写入 `docs/images/en/` 和 `docs/images/zh/`。
+脚本会在后台用一个临时配置启动 Chrome（不会动你自己的浏览器数据），从 `extension/` 加载一份已开启页面缩略图的扩展副本，在两个窗口里打开一组虚构的演示网站，等扩展截好缩略图、设好演示背景图后，再给总览页拍照。所有截图都用这张背景图，风格保持一致；不设背景图时，总览页是纯浅色或纯深色的底。中英文两套大约需要一分钟，图片会写入 `docs/images/en/` 和 `docs/images/zh/`。
 
 - 只生成一种语言：`npm run screenshots -- --lang zh`
 - 使用其他 Chrome 或 Chromium：`CHROME_PATH=/path/to/chrome npm run screenshots`

@@ -2,8 +2,8 @@
 //
 // It loads the extension (with page thumbnails turned on) into a throwaway Chrome
 // profile, opens a set of fictional demo sites (demo-sites.js) in two windows,
-// lets the extension capture them, then photographs the overview page. The
-// background picture (demo-background.jpg) is generated art, free to use.
+// lets the extension capture them, sets a background picture (demo-background.jpg,
+// generated art that's free to use) and photographs the overview page.
 //
 //   npm install
 //   npm run screenshots              # both languages
@@ -164,12 +164,22 @@ async function render(lang, base) {
     const overview = await (await browser.waitForTarget((t) => t.url().startsWith(env.overviewUrl))).page();
     await overview.waitForSelector('.card');
     await overview.setViewport({ width: 1440, height: 830, deviceScaleFactor: 2 });
+
+    // Every screenshot shows the overview over the same background picture, chosen
+    // the way a user would, so the glass looks the same in all of them.
+    await overview.click('#settings-btn');
+    const [chooser] = await Promise.all([overview.waitForFileChooser(), overview.click('#bg-thumb')]);
+    await chooser.accept([BACKGROUND]);
+    await overview.waitForFunction(() => document.getElementById('backdrop').style.backgroundImage.includes('blob:'));
+    await overview.keyboard.press('Escape'); // closes the settings
     await overview.mouse.move(8, 8); // keep the pointer off the cards
     await sleep(1200); // let the entrance animation finish
 
     const missing = await overview.evaluate(() => document.querySelectorAll('[data-tab]:not(:has(img.shot))').length);
     if (missing) console.warn(`  ${missing} tab(s) have no thumbnail yet; rerun if the images look incomplete`);
     const shoot = (name, options = {}) => overview.screenshot({ path: path.join(outDir, `${name}.webp`), ...IMAGE, ...options });
+    // The shorter images are the top of the same window, so they show the same part of the picture.
+    const top = { clip: { x: 0, y: 0, width: 1440, height: 420 } };
 
     // Set the theme explicitly: headless Chrome otherwise follows the system's.
     const theme = (value) => overview.emulateMediaFeatures([{ name: 'prefers-color-scheme', value }]);
@@ -180,18 +190,17 @@ async function render(lang, base) {
     await sleep(300);
     await shoot('overview');
 
-    await overview.setViewport({ width: 1440, height: 420, deviceScaleFactor: 2 });
     await overview.focus('#search');
     await overview.keyboard.type(SEARCH[lang]);
     await sleep(500);
-    await shoot('search');
+    await shoot('search', top);
 
     await overview.keyboard.press('Escape');
     await sleep(300);
     await overview.click('.card.group');
     await overview.mouse.move(8, 8);
     await sleep(700);
-    await shoot('group');
+    await shoot('group', top);
 
     await overview.keyboard.press('Escape');
     await sleep(400);
@@ -200,12 +209,8 @@ async function render(lang, base) {
     await sleep(700); // the panel springs open
     await shoot('settings', { clip: { x: 900, y: 0, width: 540, height: 420 } });
 
-    // A background picture, with its adjustments open.
-    const [chooser] = await Promise.all([overview.waitForFileChooser(), overview.click('#bg-thumb')]);
-    await chooser.accept([BACKGROUND]);
-    await overview.waitForFunction(() => document.getElementById('backdrop').style.backgroundImage.includes('blob:'));
+    // The background's adjustments.
     await overview.click('#bg-more');
-    await overview.setViewport({ width: 1440, height: 830, deviceScaleFactor: 2 });
     await overview.mouse.move(8, 8);
     await sleep(800);
     await shoot('background');
