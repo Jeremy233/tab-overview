@@ -9,7 +9,7 @@
   <header>
     <div class="search">
       <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="M13 13l4 4"/></svg>
-      <input id="search" type="text" data-i18n-placeholder="searchPlaceholder" autocomplete="off" spellcheck="false">
+      <input id="search" type="text" data-i18n-placeholder="searchPlaceholder" autocomplete="off" spellcheck="false" autofocus>
     </div>
     <div class="side">
       <span id="count"></span>
@@ -18,14 +18,14 @@
       </button>
     </div>
 
-    <div id="settings" class="settings" role="dialog" hidden>
-      <h3 data-i18n="settings"></h3>
+    <div id="settings" class="settings" role="dialog" aria-labelledby="settings-title" hidden>
+      <h3 id="settings-title" data-i18n="settings"></h3>
       <div class="row">
-        <span class="label" data-i18n="language"></span>
-        <div class="segmented" role="radiogroup">
-          <button type="button" data-lang="auto" data-i18n="langAuto"></button>
-          <button type="button" data-lang="zh">中文</button>
-          <button type="button" data-lang="en">English</button>
+        <span id="language-label" class="label" data-i18n="language"></span>
+        <div class="segmented" role="radiogroup" aria-labelledby="language-label">
+          <button type="button" role="radio" data-lang="auto" data-i18n="langAuto"></button>
+          <button type="button" role="radio" data-lang="zh">中文</button>
+          <button type="button" role="radio" data-lang="en">English</button>
         </div>
       </div>
       <div class="row">

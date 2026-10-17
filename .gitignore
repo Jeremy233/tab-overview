@@ -1,0 +1,7 @@
+# macOS
+.DS_Store
+
+# Packed extension builds, and the private key Chrome creates when packing
+*.crx
+*.pem
+*.zip

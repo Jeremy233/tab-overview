@@ -15,9 +15,14 @@ let thumbs = {};
 let selectedKey = null; // 'tab:<id>' or 'group:<id>'
 let openGroupId = null; // set while looking inside one tab group
 let leaving = false;
-let loaded = false;
+let ready = false; // true once the first data has arrived
+let started; // promise for that first data
 let langPref = 'auto';
 let t = translator(resolveLang(langPref));
+
+const nodes = new Map(); // key -> { node, sig }: card elements kept from earlier renders
+const shotImgs = new Map(); // tabId -> { shot, img }, so screenshots aren't decoded again
+const closing = new Set(); // tabs we've asked Chrome to close
 
 const NO_GROUP = -1; // chrome.tabGroups.TAB_GROUP_ID_NONE
 const MOSAIC_MAX = 9;
@@ -25,6 +30,7 @@ const MOSAIC_MAX = 9;
 const thumbKey = (tabId) => `thumb:${tabId}`;
 const tabKey = (id) => `tab:${id}`;
 const groupKey = (id) => `group:${id}`;
+const isOverview = (tab) => (tab.url || tab.pendingUrl || '').startsWith(OVERVIEW_URL);
 
 function faviconUrl(tab) {
   const url = new URL(chrome.runtime.getURL('/_favicon/'));
@@ -66,17 +72,38 @@ function applyLanguage() {
 
 // ---- data ----
 
-async function load() {
-  selfTab ??= await chrome.tabs.getCurrent();
-  const [all, stored, groupList] = await Promise.all([
+function queryTabs() {
+  return Promise.all([
     chrome.tabs.query({}),
-    chrome.storage.session.get(null),
     // Missing until the extension is reloaded with the tabGroups permission.
     chrome.tabGroups?.query({}) ?? [],
   ]);
-  tabs = all.filter((t) => t.id !== selfTab?.id && !t.url?.startsWith(OVERVIEW_URL));
+}
+
+function setTabs(all, groupList) {
+  // Refresh our own tab too: it may have been dragged to another window.
+  selfTab = all.find((tab) => tab.id === selfTab?.id) ?? selfTab;
+  tabs = all.filter((tab) => tab.id !== selfTab?.id && !isOverview(tab));
   groups = new Map(groupList.map((g) => [g.id, g]));
-  thumbs = stored;
+  // Forget the elements and screenshots of tabs, groups and windows that are gone.
+  const ids = new Set(tabs.map((tab) => tab.id));
+  const windows = new Set(all.map((tab) => tab.windowId));
+  for (const id of shotImgs.keys()) if (!ids.has(id)) shotImgs.delete(id);
+  for (const key of nodes.keys()) {
+    const [kind, id] = key.split(':');
+    const live = kind === 'tab' ? ids : kind === 'group' ? groups : windows;
+    if (!live.has(Number(id))) nodes.delete(key);
+  }
+}
+
+// Thumbnails are kept current by storage.onChanged, so a reload only needs the tabs.
+let loadSeq = 0;
+async function load() {
+  await started;
+  const seq = ++loadSeq;
+  const [all, groupList] = await queryTabs();
+  if (seq !== loadSeq) return; // a newer load is already on its way
+  setTabs(all, groupList);
   render();
 }
 
@@ -87,41 +114,97 @@ function scheduleLoad() {
 }
 
 // ---- rendering ----
+//
+// Each render describes the whole grid, but keeps the elements of cards whose
+// content hasn't changed and only moves what's out of place. Typing a search, or
+// another tab updating its title, then touches a few nodes instead of rebuilding,
+// re-laying-out and repainting every card.
 
-function fillThumb(thumb, tab) {
-  const shot = thumbs[thumbKey(tab.id)];
-  if (shot) {
+// The element kept under `key` if it was built from the same inputs (`sig`), else a fresh one.
+function reuse(key, sig, build) {
+  let entry = nodes.get(key);
+  if (entry?.sig !== sig) {
+    entry = { node: build(), sig };
+    nodes.set(key, entry);
+  }
+  return entry.node;
+}
+
+// Makes `parent`'s children exactly `wanted`, in order, leaving the ones already in place alone.
+function reconcile(parent, wanted) {
+  const current = [...parent.children];
+  if (current.length === wanted.length && current.every((child, i) => child === wanted[i])) return;
+  const keep = new Set(wanted);
+  const stale = current.filter((child) => !keep.has(child));
+  // When most children go (a search narrowing down), swapping them all at once is cheaper.
+  if (stale.length > wanted.length) return parent.replaceChildren(...wanted);
+  for (const child of stale) child.remove();
+  let cursor = parent.firstElementChild;
+  for (const node of wanted) {
+    if (node === cursor) cursor = cursor.nextElementSibling;
+    else parent.insertBefore(node, cursor);
+  }
+}
+
+// A card's position, used to stagger the entrance animation.
+function setIndex(node, i) {
+  if (node.style.getPropertyValue('--i') !== String(i)) node.style.setProperty('--i', i);
+}
+
+function shotImg(tabId, shot) {
+  let entry = shotImgs.get(tabId);
+  if (entry?.shot !== shot) {
     const img = el('img', 'shot');
     img.decoding = 'async';
-    img.src = shot.src;
     img.alt = '';
-    thumb.replaceChildren(img);
-  } else {
+    img.src = shot.src;
+    entry = { shot, img };
+    shotImgs.set(tabId, entry);
+  }
+  return entry.img;
+}
+
+// Shows the tab's screenshot in `box`, or its favicon if there's none yet.
+function fillThumb(box, tab) {
+  const shot = thumbs[thumbKey(tab.id)];
+  if (shot) {
+    const img = shotImg(tab.id, shot);
+    if (box.firstChild !== img) box.replaceChildren(img);
+  } else if (!box.firstChild?.classList.contains('placeholder')) {
+    shotImgs.delete(tab.id);
     const ph = el('div', 'placeholder');
     const icon = el('img');
     icon.src = faviconUrl(tab);
     icon.alt = '';
     ph.append(icon, el('span', '', hostOf(tab.url)));
-    thumb.replaceChildren(ph);
+    box.replaceChildren(ph);
   }
 }
 
-function buildCard(tab, i) {
-  const key = tabKey(tab.id);
+function closeButton(label, onClick) {
+  const close = el('button', 'close', '×');
+  close.type = 'button';
+  close.title = label;
+  close.setAttribute('aria-label', label);
+  close.addEventListener('click', (e) => {
+    e.stopPropagation();
+    onClick();
+  });
+  return close;
+}
+
+function buildCard(tab, dotColor) {
   const card = el('div', 'card');
-  card.dataset.key = key;
-  card.style.setProperty('--i', i);
+  card.dataset.key = tabKey(tab.id);
   if (tab.id === fromTabId) card.classList.add('current');
 
   const thumb = el('div', 'thumb');
   thumb.dataset.tab = tab.id;
-  fillThumb(thumb, tab);
 
   const meta = el('div', 'meta');
-  // Outside its group (i.e. in search results), mark which group a tab belongs to.
-  if (tab.groupId !== NO_GROUP && openGroupId == null) {
+  if (dotColor) {
     const dot = el('span', 'dot');
-    dot.style.setProperty('--group-color', groupColor(tab.groupId));
+    dot.style.setProperty('--group-color', dotColor);
     meta.append(dot);
   }
   const fav = el('img');
@@ -131,16 +214,19 @@ function buildCard(tab, i) {
   if (tab.audible) meta.append(el('span', 'badge', '🔊'));
   if (tab.pinned) meta.append(el('span', 'badge', '📌'));
 
-  const close = el('button', 'close', '×');
-  close.title = t('closeTab');
-  close.addEventListener('click', (e) => {
-    e.stopPropagation();
-    closeCard(card, tab.id);
-  });
-
-  card.append(thumb, meta, close);
+  card.append(thumb, meta, closeButton(t('closeTab'), () => closeCard(card, [tab.id])));
   card.addEventListener('click', () => activate(tab.id));
-  card.addEventListener('mousemove', () => select(key));
+  return card;
+}
+
+function tabCard(tab, i) {
+  // Outside its group (i.e. in search results), a dot marks which group a tab belongs to.
+  const dot = tab.groupId !== NO_GROUP && openGroupId == null ? groupColor(tab.groupId) : '';
+  const sig = JSON.stringify([tab.title, tab.url, tab.pendingUrl, tab.audible, tab.pinned, dot, t('closeTab')]);
+  const card = reuse(tabKey(tab.id), sig, () => buildCard(tab, dot));
+  card.classList.toggle('removing', closing.has(tab.id));
+  setIndex(card, i);
+  fillThumb(card.firstChild, tab);
   return card;
 }
 
@@ -153,11 +239,9 @@ function groupTitle(groupId) {
 }
 
 // One card standing in for a whole tab group: a mosaic of its first few tabs.
-function buildGroupCard(groupId, list, i) {
-  const key = groupKey(groupId);
+function buildGroupCard(groupId, list) {
   const card = el('div', 'card group');
-  card.dataset.key = key;
-  card.style.setProperty('--i', i);
+  card.dataset.key = groupKey(groupId);
   card.style.setProperty('--group-color', groupColor(groupId));
   if (list.some((tab) => tab.id === fromTabId)) card.classList.add('current');
 
@@ -172,7 +256,6 @@ function buildGroupCard(groupId, list, i) {
     tile.dataset.tab = tab.id;
     // The first tile absorbs any leftover cells so the grid has no holes.
     if (n === 0) tile.style.gridColumn = `span ${cols * rows - shown.length + 1}`;
-    fillThumb(tile, tab);
     mosaic.append(tile);
   });
 
@@ -183,16 +266,22 @@ function buildGroupCard(groupId, list, i) {
     el('span', 'count', String(list.length)),
   );
 
-  const close = el('button', 'close', '×');
-  close.title = t('closeGroup');
-  close.addEventListener('click', (e) => {
-    e.stopPropagation();
-    closeCard(card, list.map((tab) => tab.id));
-  });
-
-  card.append(mosaic, meta, close);
+  card.append(mosaic, meta, closeButton(t('closeGroup'), () => closeCard(card, list.map((tab) => tab.id))));
   card.addEventListener('click', () => openGroup(groupId));
-  card.addEventListener('mousemove', () => select(key));
+  return card;
+}
+
+function groupCard(groupId, list, i) {
+  const shown = list.slice(0, MOSAIC_MAX);
+  const sig = JSON.stringify([
+    groupTitle(groupId), groupColor(groupId), list.map((tab) => tab.id),
+    shown.map((tab) => tab.url || tab.pendingUrl), t('closeGroup'),
+  ]);
+  const card = reuse(groupKey(groupId), sig, () => buildGroupCard(groupId, list));
+  card.classList.toggle('removing', list.every((tab) => closing.has(tab.id)));
+  setIndex(card, i);
+  const tiles = card.firstChild.children;
+  shown.forEach((tab, n) => fillThumb(tiles[n], tab));
   return card;
 }
 
@@ -206,71 +295,94 @@ function buildGroupHeader(groupId, count) {
   return h;
 }
 
-function buildNewTabCard(windowId, i) {
+function buildNewTabCard(windowId, title) {
   const card = el('button', 'new-tab');
   card.type = 'button';
-  card.title = t(openGroupId != null ? 'newTabInGroupTitle' : 'newTabTitle');
-  card.style.setProperty('--i', i);
-  const box = el('div', 'thumb');
+  card.title = title;
+  const box = el('span', 'thumb');
   box.append(el('span', 'plus', '+'));
-  card.append(box, el('div', 'meta', t('newTab')));
+  card.append(box, el('span', 'meta', t('newTab')));
   card.addEventListener('click', () => newTab(windowId, openGroupId));
   return card;
 }
 
-function render() {
+function newTabCard(windowId, i) {
+  const title = t(openGroupId != null ? 'newTabInGroupTitle' : 'newTabTitle');
+  const card = reuse(`new:${windowId}`, title, () => buildNewTabCard(windowId, title));
+  setIndex(card, i);
+  return card;
+}
+
+function windowSection(windowId, header, items) {
+  const section = reuse(`window:${windowId}`, '', () => {
+    const node = el('section', 'window');
+    node.append(el('div', 'grid'));
+    return node;
+  });
+  const grid = section.lastElementChild;
+  reconcile(section, header ? [header, grid] : [grid]);
+  reconcile(grid, items);
+  return section;
+}
+
+// `scroll` brings the selected card into view; it's left off for refreshes
+// caused by other tabs changing, so the page doesn't jump while you browse it.
+function render({ scroll = false } = {}) {
+  if (!ready) return;
   const q = search.value.trim().toLowerCase();
-  if (openGroupId != null && !tabs.some((t) => t.groupId === openGroupId)) openGroupId = null;
-  const scope = openGroupId != null ? tabs.filter((t) => t.groupId === openGroupId) : tabs;
+  if (openGroupId != null && !tabs.some((tab) => tab.groupId === openGroupId)) openGroupId = null;
+  const scope = openGroupId != null ? tabs.filter((tab) => tab.groupId === openGroupId) : tabs;
   const visible = q
-    ? scope.filter((t) => `${t.title} ${t.url}`.toLowerCase().includes(q))
+    ? scope.filter((tab) => `${tab.title || ''} ${tab.url || ''}`.toLowerCase().includes(q))
     : scope;
   // Groups fold into a single card, except while searching or inside a group.
   const folded = !q && openGroupId == null;
 
-  // Current window first, then the rest in creation order.
-  const windowIds = [...new Set(tabs.map((t) => t.windowId))].sort(
-    (a, b) => (b === selfTab?.windowId) - (a === selfTab?.windowId) || a - b,
-  );
+  // Current window first, then the rest in creation order. The current window is
+  // listed even with no other tabs, so its "new tab" card is always there.
+  const windowIds = [...new Set([selfTab?.windowId, ...tabs.map((tab) => tab.windowId)])]
+    .filter((wid) => wid != null)
+    .sort((a, b) => (b === selfTab?.windowId) - (a === selfTab?.windowId) || a - b);
 
   const sections = [];
   let i = 0;
   windowIds.forEach((wid, n) => {
-    const list = visible.filter((t) => t.windowId === wid).sort((a, b) => a.index - b.index);
-    if (!list.length) return;
-    const section = el('section', 'window');
+    const list = visible.filter((tab) => tab.windowId === wid).sort((a, b) => a.index - b.index);
+    if (!list.length && (q || openGroupId != null || wid !== selfTab?.windowId)) return;
+    let header = null;
     if (openGroupId != null) {
-      section.append(buildGroupHeader(openGroupId, list.length));
+      const sig = JSON.stringify([openGroupId, groupTitle(openGroupId), groupColor(openGroupId), t('pageTitle'), t('tabCount', list.length)]);
+      header = reuse(`header:${wid}`, sig, () => buildGroupHeader(openGroupId, list.length));
     } else if (windowIds.length > 1) {
       const name = wid === selfTab?.windowId ? t('currentWindow') : t('windowN', n + 1);
-      section.append(el('h2', '', `${name} · ${t('tabCount', list.length)}`));
+      const text = `${name} · ${t('tabCount', list.length)}`;
+      header = reuse(`header:${wid}`, text, () => el('h2', '', text));
     }
-    const grid = el('div', 'grid');
+    const items = [];
     const seen = new Set();
     for (const tab of list) {
       if (!folded || tab.groupId === NO_GROUP) {
-        grid.append(buildCard(tab, i++));
+        items.push(tabCard(tab, i++));
       } else if (!seen.has(tab.groupId)) {
         seen.add(tab.groupId);
-        grid.append(buildGroupCard(tab.groupId, list.filter((t) => t.groupId === tab.groupId), i++));
+        items.push(groupCard(tab.groupId, list.filter((other) => other.groupId === tab.groupId), i++));
       }
     }
-    if (!q) grid.append(buildNewTabCard(wid, i++));
-    section.append(grid);
-    sections.push(section);
+    if (!q) items.push(newTabCard(wid, i++));
+    sections.push(windowSection(wid, header, items));
   });
-  container.replaceChildren(...sections);
+  reconcile(container, sections);
 
   const keys = cards().map((c) => c.dataset.key);
   if (!keys.includes(selectedKey)) {
-    const from = q ? null : visible.find((t) => t.id === fromTabId);
+    const from = q ? null : visible.find((tab) => tab.id === fromTabId);
     const fromKey = from && (folded && from.groupId !== NO_GROUP ? groupKey(from.groupId) : tabKey(from.id));
-    selectedKey = fromKey ?? keys[0] ?? null;
+    selectedKey = keys.includes(fromKey) ? fromKey : keys[0] ?? null;
   }
-  updateSelection(loaded);
+  updateSelection(scroll);
 
   countEl.textContent = q ? `${visible.length} / ${scope.length}` : t('tabCount', scope.length);
-  emptyEl.hidden = visible.length > 0;
+  emptyEl.hidden = !q || visible.length > 0;
 }
 
 function cards() {
@@ -278,11 +390,11 @@ function cards() {
 }
 
 function updateSelection(scroll) {
-  for (const card of cards()) {
-    const on = card.dataset.key === selectedKey;
-    card.classList.toggle('selected', on);
-    if (on && scroll) card.scrollIntoView({ block: 'nearest' });
-  }
+  const card = selectedKey ? container.querySelector(`.card[data-key="${selectedKey}"]`) : null;
+  for (const other of container.querySelectorAll('.card.selected')) if (other !== card) other.classList.remove('selected');
+  if (!card) return;
+  card.classList.add('selected');
+  if (scroll) card.scrollIntoView({ block: 'nearest' });
 }
 
 function select(key) {
@@ -293,9 +405,11 @@ function select(key) {
 }
 
 // Replay the entrance animation when switching between the overview and a group.
+let animateTimer;
 function animateIn() {
   document.body.classList.add('animate');
-  setTimeout(() => document.body.classList.remove('animate'), 300);
+  clearTimeout(animateTimer);
+  animateTimer = setTimeout(() => document.body.classList.remove('animate'), 300);
 }
 
 // ---- actions ----
@@ -312,7 +426,8 @@ function openGroup(groupId) {
   search.value = '';
   animateIn();
   scrollTo(0, 0);
-  render();
+  render({ scroll: true });
+  search.focus({ preventScroll: true });
 }
 
 function closeGroup() {
@@ -321,31 +436,51 @@ function closeGroup() {
   selectedKey = groupKey(groupId);
   search.value = '';
   animateIn();
-  render();
-  search.focus();
+  render({ scroll: true });
+  search.focus({ preventScroll: true });
+}
+
+function closeSelf() {
+  if (selfTab) chrome.tabs.remove(selfTab.id);
 }
 
 async function activate(id) {
   const tab = tabs.find((t) => t.id === id);
-  if (!tab) return;
+  if (!tab || leaving) return;
   leaving = true;
-  await chrome.tabs.update(id, { active: true });
-  await chrome.windows.update(tab.windowId, { focused: true });
-  if (selfTab) chrome.tabs.remove(selfTab.id);
+  try {
+    await chrome.tabs.update(id, { active: true });
+    if (tab.windowId !== selfTab?.windowId) await chrome.windows.update(tab.windowId, { focused: true });
+    closeSelf();
+  } catch {
+    // The tab closed in the meantime; stay and show what's there now.
+    leaving = false;
+    load();
+  }
 }
 
 async function newTab(windowId, groupId = null) {
+  if (leaving) return;
   leaving = true;
-  const tab = await chrome.tabs.create({ windowId, active: true });
-  if (groupId != null) await chrome.tabs.group({ groupId, tabIds: tab.id });
-  await chrome.windows.update(windowId, { focused: true });
-  if (selfTab) chrome.tabs.remove(selfTab.id);
+  let tab;
+  try {
+    tab = await chrome.tabs.create({ windowId, active: true });
+  } catch {
+    leaving = false; // e.g. the window just closed
+    load();
+    return;
+  }
+  // The group may have been closed meanwhile; the new tab is still wanted.
+  if (groupId != null) await chrome.tabs.group({ groupId, tabIds: tab.id }).catch(() => {});
+  if (windowId !== selfTab?.windowId) await chrome.windows.update(windowId, { focused: true }).catch(() => {});
+  closeSelf();
 }
 
-async function goBack() {
+function goBack() {
   if (fromTabId && tabs.some((t) => t.id === fromTabId)) return activate(fromTabId);
+  if (leaving) return;
   leaving = true;
-  if (selfTab) chrome.tabs.remove(selfTab.id);
+  closeSelf();
 }
 
 // Close one tab, or every tab behind a group card.
@@ -358,7 +493,16 @@ function closeCard(card, ids) {
   }
   card.classList.add('removing');
   updateSelection(false);
-  chrome.tabs.remove(ids);
+  search.focus({ preventScroll: true }); // the clicked button is going away
+  for (const id of ids) closing.add(id);
+  chrome.tabs.remove(ids)
+    .then(() => { tabs = tabs.filter((tab) => !ids.includes(tab.id)); }) // don't bring them back before the reload
+    .catch(() => {})
+    .finally(() => {
+      // Refresh either way: if a tab survived (or was already gone), the grid catches up.
+      for (const id of ids) closing.delete(id);
+      scheduleLoad();
+    });
 }
 
 function moveSelection(dir) {
@@ -404,6 +548,7 @@ function toggleSettings(open = settingsPanel.hidden) {
   settingsPanel.hidden = !open;
   settingsBtn.setAttribute('aria-expanded', open);
   if (open) showShortcut();
+  else search.focus({ preventScroll: true });
 }
 
 settingsBtn.addEventListener('click', (e) => {
@@ -429,9 +574,21 @@ document.getElementById('shortcut-change').addEventListener('click', () => {
 
 // ---- events ----
 
-search.addEventListener('input', render);
+// While an IME is composing (e.g. typing pinyin), wait for the final text before filtering.
+search.addEventListener('input', (e) => {
+  if (!e.isComposing) render({ scroll: true });
+});
+search.addEventListener('compositionend', () => render({ scroll: true }));
+
+// Hovering selects a card.
+container.addEventListener('mousemove', (e) => {
+  const card = e.target.closest('.card:not(.removing)');
+  if (card) select(card.dataset.key);
+});
 
 document.addEventListener('keydown', (e) => {
+  // Enter, Esc and arrows confirm or navigate an IME composition; they aren't for us.
+  if (e.isComposing || e.keyCode === 229) return;
   if (!settingsPanel.hidden) {
     if (e.key === 'Escape') toggleSettings(false);
     return;
@@ -443,13 +600,14 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
     moveSelection(arrows[e.key]);
   } else if (e.key === 'Enter') {
+    if (e.target instanceof HTMLButtonElement) return; // let a focused button handle it
     e.preventDefault();
     if (selectedKey != null) choose(selectedKey);
   } else if (e.key === 'Escape') {
     e.preventDefault();
     if (search.value) {
       search.value = '';
-      render();
+      render({ scroll: true });
     } else if (openGroupId != null) {
       closeGroup();
     } else {
@@ -482,7 +640,9 @@ chrome.tabs.onMoved.addListener(scheduleLoad);
 chrome.tabs.onAttached.addListener(scheduleLoad);
 chrome.tabs.onDetached.addListener(scheduleLoad);
 chrome.tabs.onUpdated.addListener((_id, info) => {
-  if (info.title || info.favIconUrl || info.audible != null || info.pinned != null || info.groupId != null) scheduleLoad();
+  if (info.title || info.url || info.favIconUrl || info.audible != null || info.pinned != null || info.groupId != null) {
+    scheduleLoad();
+  }
 });
 chrome.tabGroups?.onCreated.addListener(scheduleLoad);
 chrome.tabGroups?.onUpdated.addListener(scheduleLoad);
@@ -492,19 +652,27 @@ chrome.tabGroups?.onRemoved.addListener(scheduleLoad);
 chrome.tabs.onActivated.addListener(({ tabId, windowId }) => {
   if (!leaving && selfTab && windowId === selfTab.windowId && tabId !== selfTab.id) {
     leaving = true;
-    chrome.tabs.remove(selfTab.id);
+    closeSelf();
   }
 });
 
 history.scrollRestoration = 'manual';
-getLangPref().then((pref) => {
+search.focus();
+// Ask for everything the first render needs at once rather than one after another.
+started = Promise.all([
+  getLangPref(),
+  chrome.tabs.getCurrent(),
+  queryTabs(),
+  // Taken the moment it arrives, so thumbnail changes reported after it aren't lost.
+  chrome.storage.session.get(null).then((stored) => { thumbs = stored; }),
+]).then(([pref, current, [all, groupList]]) => {
   langPref = pref;
+  selfTab = current;
   applyLanguage();
-  return load();
-}).then(() => {
-  search.focus();
-  loaded = true;
+  setTabs(all, groupList);
+  ready = true;
+  render();
   scrollTo(0, 0);
-  requestAnimationFrame(() => updateSelection(true));
+  updateSelection(true);
   setTimeout(() => document.body.classList.remove('animate'), 300);
 });

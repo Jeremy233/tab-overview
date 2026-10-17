@@ -4,6 +4,7 @@
   "version": "0.3.0",
   "description": "__MSG_description__",
   "default_locale": "en",
+  "minimum_chrome_version": "112",
   "permissions": ["tabs", "tabGroups", "storage", "favicon"],
   "host_permissions": ["<all_urls>"],
   "background": {
