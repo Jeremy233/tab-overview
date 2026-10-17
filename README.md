@@ -74,7 +74,7 @@ Click the gear in the top-right corner to choose the language (follow the browse
 
 ## Page screenshots
 
-Screenshots are **off by default**: every tab is shown with its site icon and name. To see a picture of each page, turn on **Settings → Page screenshots**. Chrome then asks you to allow Tab Overview to *“Read and change all your data on all websites”*. That is the access Chrome requires before an extension may capture the visible tab, and Tab Overview uses it for nothing else. Turning the switch off gives that access back and deletes every screenshot immediately.
+Screenshots are **off by default**: every tab is shown with its site icon and name. To see a picture of each page, turn on **Settings → Page screenshots**. Chrome then asks you to allow Tab Overview to *“Read and change all your data on all websites”*. That is the access Chrome requires before an extension may capture the visible tab, and Tab Overview uses it for nothing else. Turning the switch off gives that access back and deletes every screenshot immediately. While screenshots are off, a small note at the top of the overview points to this setting; click **×** to hide it for good.
 
 While it's on, keep in mind that Chrome only lets extensions capture the tab that is currently on screen. So Tab Overview takes a small screenshot whenever you look at a tab: shortly after you switch to it, after it finishes loading, and right before the overview opens. That means:
 

@@ -8,6 +8,7 @@ const emptyEl = document.getElementById('empty');
 const settingsBtn = document.getElementById('settings-btn');
 const settingsPanel = document.getElementById('settings');
 const shotsSwitch = document.getElementById('shots-switch');
+const shotsTip = document.getElementById('shots-tip');
 
 let selfTab = null;
 let tabs = [];
@@ -551,6 +552,15 @@ async function showScreenshotsSetting() {
   shotsSwitch.setAttribute('aria-checked', await chrome.permissions.contains(SCREENSHOT_PERMISSION));
 }
 
+// While screenshots are off, a small tip points to the setting, until dismissed.
+async function showScreenshotsTip() {
+  const [on, { shotsTipDismissed }] = await Promise.all([
+    chrome.permissions.contains(SCREENSHOT_PERMISSION),
+    chrome.storage.sync.get('shotsTipDismissed'),
+  ]);
+  shotsTip.hidden = on || !!shotsTipDismissed;
+}
+
 function toggleSettings(open = settingsPanel.hidden) {
   settingsPanel.hidden = !open;
   settingsBtn.setAttribute('aria-expanded', open);
@@ -596,8 +606,25 @@ shotsSwitch.addEventListener('click', async () => {
     showScreenshotsSetting();
   }
 });
-chrome.permissions.onAdded.addListener(showScreenshotsSetting);
-chrome.permissions.onRemoved.addListener(showScreenshotsSetting);
+for (const event of [chrome.permissions.onAdded, chrome.permissions.onRemoved]) {
+  event.addListener(showScreenshotsSetting);
+  event.addListener(showScreenshotsTip);
+}
+
+document.getElementById('shots-tip-open').addEventListener('click', () => {
+  toggleSettings(true);
+  const row = document.getElementById('shots-row');
+  row.classList.remove('flash');
+  void row.offsetWidth; // restart the highlight if it's clicked again
+  row.classList.add('flash');
+  shotsSwitch.focus();
+});
+
+document.getElementById('shots-tip-close').addEventListener('click', () => {
+  shotsTip.hidden = true;
+  chrome.storage.sync.set({ shotsTipDismissed: true });
+  search.focus({ preventScroll: true });
+});
 
 document.getElementById('shortcut-change').addEventListener('click', () => {
   chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
@@ -696,6 +723,7 @@ started = Promise.all([
   queryTabs(),
   // Taken the moment it arrives, so thumbnail changes reported after it aren't lost.
   chrome.storage.session.get(null).then((stored) => { thumbs = stored; }),
+  showScreenshotsTip(), // settled before the first paint, so the grid doesn't shift
 ]).then(([pref, current, [all, groupList]]) => {
   langPref = pref;
   selfTab = current;

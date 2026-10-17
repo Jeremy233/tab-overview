@@ -30,7 +30,7 @@
           <button type="button" role="radio" data-lang="en">English</button>
         </div>
       </div>
-      <div class="row">
+      <div id="shots-row" class="row">
         <span class="label">
           <span id="shots-label" data-i18n="screenshots"></span>
           <small id="shots-hint" class="hint" data-i18n="screenshotsHint"></small>
@@ -46,6 +46,12 @@
       </div>
     </div>
   </header>
+
+  <div id="shots-tip" class="tip" hidden>
+    <span data-i18n="shotsTip"></span>
+    <button id="shots-tip-open" class="link" type="button" data-i18n="shotsTipAction"></button>
+    <button id="shots-tip-close" class="tip-close" type="button" data-i18n-title="dismiss">×</button>
+  </div>
 
   <main id="windows"></main>
   <p id="empty" data-i18n="noMatches" hidden></p>

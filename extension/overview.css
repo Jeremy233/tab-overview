@@ -253,6 +253,47 @@ header {
 
 .link:hover { text-decoration: underline; }
 
+/* Shown while page screenshots are off, until dismissed. */
+.tip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  max-width: calc(100% - 64px);
+  margin: 4px auto 8px;
+  padding: 5px 6px 5px 14px;
+  border-radius: 10px;
+  background: var(--field);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.tip[hidden] { display: none; }
+
+.tip-close {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.tip-close:hover { background: var(--field); color: var(--text); }
+
+/* Draws the eye to the screenshots switch when the tip opens settings. */
+.settings .row.flash {
+  border-radius: 8px;
+  animation: flash 1.4s ease;
+}
+
+@keyframes flash { 0%, 50% { background: color-mix(in srgb, var(--accent) 14%, transparent); } }
+
 main {
   padding: 8px 32px 72px;
   max-width: 1600px;
@@ -547,6 +588,7 @@ kbd {
 @media (max-width: 640px) {
   header, main { padding-left: 16px; padding-right: 16px; }
   #count { display: none; }
+  .tip { max-width: calc(100% - 32px); }
   .settings { right: 16px; width: calc(100% - 32px); }
   footer { display: none; }
 }
